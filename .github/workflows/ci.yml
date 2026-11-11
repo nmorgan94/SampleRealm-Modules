@@ -27,3 +27,6 @@ jobs:
 
       - name: Tests (Release)
         run: cmake --workflow --preset test-release
+
+      - name: Web tests
+        run: npm ci --no-audit --no-fund && npm run typecheck && npm test

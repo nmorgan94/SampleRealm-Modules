@@ -1,0 +1,27 @@
+{
+  "name": "@samplerealm/modules",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The web code shared by every SampleRealm plugin's editor and demo",
+  "files": ["web"],
+  "exports": {
+    "./*": "./web/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"Tests/web/**/*.test.ts\""
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "18.3.31",
+    "react": "18.3.1",
+    "typescript": "7.0.2"
+  }
+}

@@ -54,6 +54,9 @@ set(ENV{LICENCE_KEYS} "00000000000000aa:0000000000000000000000000000000000000000
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Licensing.cmake)
 add_licensing(ModulesTests)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Core.cmake)
+add_plugin_core(ModulesTests)
+
 # Tests/plugin comes with licensing::fixtures
 file(GLOB TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
 
@@ -64,6 +67,7 @@ target_compile_definitions(ModulesTests PRIVATE JucePlugin_Manufacturer="Example
 
 target_link_libraries(ModulesTests PRIVATE
     licensing::fixtures
+    juce::juce_audio_basics
     Catch2::Catch2WithMain
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)

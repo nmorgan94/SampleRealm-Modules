@@ -36,7 +36,7 @@ export interface PresetStatus {
   modified: boolean;
 }
 
-// Mirrors a plugin's Source/presets/PresetManager.h
+// Mirrors editor/PresetManager.h
 export interface PresetBackend {
   status(): PresetStatus;
   onStatus(listener: (status: PresetStatus) => void): () => void;
@@ -65,7 +65,7 @@ export interface ActivationStatus {
   machine: string;
 }
 
-// Mirrors a plugin's Source/ui/ActivationActions.h
+// Mirrors editor/ActivationActions.h
 export interface ActivationBackend {
   status(): ActivationStatus;
   onStatus(listener: (status: ActivationStatus) => void): () => void;

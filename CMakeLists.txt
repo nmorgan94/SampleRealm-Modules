@@ -44,13 +44,20 @@ add_licensing(ModulesTests)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Core.cmake)
 add_plugin_core(ModulesTests)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Editor.cmake)
+add_plugin_editor(ModulesTests)
+
 # Tests/plugin comes with licensing::fixtures
 file(GLOB TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
 
 target_sources(ModulesTests PRIVATE ${TestFiles})
 
 # A plugin has this from JUCE
-target_compile_definitions(ModulesTests PRIVATE JucePlugin_Manufacturer="Example")
+target_compile_definitions(ModulesTests PRIVATE
+    JucePlugin_Manufacturer="Example"
+    JucePlugin_VersionString="0.0.1"
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0)
 
 target_link_libraries(ModulesTests PRIVATE
     licensing::fixtures

@@ -97,7 +97,7 @@ function(add_wasm_demo)
     # For CI to name its artifact
     file(WRITE "${CMAKE_BINARY_DIR}/demo-folder" "${demoFolder}")
 
-    webui_sources("${uiDir}" "/src/plugin/|/public/plugin/" uiInputs npmInstalled)
+    webui_sources("${uiDir}" "/src/plugin/|/public/plugin/|/web/plugin/" uiInputs npmInstalled)
 
     add_custom_command(OUTPUT "${demoDir}/index.html"
         COMMAND ${NPM_EXECUTABLE} run typecheck

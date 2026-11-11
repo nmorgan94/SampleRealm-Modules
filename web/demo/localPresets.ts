@@ -1,4 +1,4 @@
-// A plugin's Source/presets/PresetManager.cpp's rules, with user presets in the browser instead of files
+// editor/PresetManager.cpp's rules, with user presets in the browser instead of files
 import { isSamePreset, listenerSet, type PresetBackend, type PresetEntry, type PresetStatus } from '../backend.ts';
 
 // S is the plugin's own state, stored beside the entry's fields

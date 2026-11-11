@@ -11,11 +11,15 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | `Tests/plugin/` | Tests built into every plugin's own tests: its company name, and that it never trusts the test key |
 | `core/samplerealm/` | Headers a plugin and its wasm engine share: parameter specs and values, the UI info, the transport, the peak meter |
 | `cmake/Core.cmake` | `add_plugin_core(<target>)`, which puts them on the include path as `<samplerealm/...>`, with the plugin repo's commit as `buildCommit` (`cmake/BuildInfo.cmake`) |
+| `editor/` | A JUCE module: the header bar, `PresetManager` and the preset bar, the prompt and manual overlays, the activation bar, About, `LabeledSlider`, `LevelMeter` |
+| `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`, for `<editor/editor.h>` |
 | `cmake/Tests.cmake` | `add_unit_tests(<plugin target>)`: the plugin's `Tests/` as a Catch2 executable, registered with CTest |
 | `cmake/Pluginval.cmake` | `add_pluginval_tests(<plugin target>)`: pluginval built from source and run on each plugin format |
 | `cmake/WebUi.cmake` | `add_webview_ui(<plugin target>)`: the plugin's `webui/` built into it for a WebView editor |
 | `cmake/WasmDemo.cmake` | `add_wasm_demo(SOURCES ...)`: the web demo's engine and page, with the JUCE patch it needs |
 | `web/` | TypeScript for a plugin's `webui/`, as the npm package `@samplerealm/modules` |
+| `web/editor/` | The React twins of `editor/`, with the menu, text button, parameter maths and `useParam` |
+| `web/plugin/` | `pluginBackend`, the WebView editor's side of the backend contract |
 | `Tests/web/` | Its tests |
 
 ## Using it in a plugin
@@ -34,10 +38,17 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
   environment variables. This repo holds neither.
 - A plugin's test target links `licensing::fixtures`, which brings `Tests/plugin/` with it.
 - Imports name the file: `@samplerealm/modules/demo/localPresets.ts`. `backend.ts` is the editor's
-  contract, `demo/` the web demo (`processor.js` is imported with `?url`), `testing/` the set-up
-  for a plugin's own tests.
-- The demo's stylesheet needs `@source '<path to node_modules>/@samplerealm/modules/web';` for
-  Tailwind, and Vite needs `resolve.dedupe: ['react', 'react-dom']` when the package is linked.
+  contract, `editor/` its shared parts, `plugin/` the WebView's backend, `demo/` the web demo
+  (`processor.js` is imported with `?url`), `testing/` the set-up for a plugin's own tests.
+- Tailwind needs `@source '<path to node_modules>/@samplerealm/modules/web';` in the demo's
+  stylesheet and `.../web/editor` in the plugin's, and Vite needs
+  `resolve.dedupe: ['react', 'react-dom']` when the package is linked.
+- The editor's colours are the plugin's. Native: its LookAndFeel sets `HeaderBar`, `ModalOverlay`,
+  `ActivationBar` and `LevelMeter`'s colour IDs, draws the rotary slider, and implements `EditorFonts` for the title and the manual.
+  Web: its stylesheet defines `--color-` `background`, `widget`, `line`, `fg`, `thumb`, `clip`, `header`, `title`,
+  `activation`, `activation-outline`, `overlay-dim`, `overlay-panel`, `overlay-outline`, `input`,
+  `input-outline`, `input-focus`, `input-highlight` and `scrollbar`. `fonts.ts` assumes Orbitron.
+- The manual is the plugin's: `ManualOverlay (markdown)` and `useManual(markdown)`.
 - Node won't run TypeScript from `node_modules`, so a plugin's tests run as
   `node --import @samplerealm/modules/testing/typescript.mjs --test ...`.
 

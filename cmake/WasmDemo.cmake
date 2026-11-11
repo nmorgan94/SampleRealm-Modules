@@ -4,9 +4,12 @@
 #     include(${SampleRealm-Modules_SOURCE_DIR}/cmake/WasmDemo.cmake)
 #     add_wasm_demo(SOURCES Engine.cpp ../Source/dsp/Effect.cpp)
 #
-# Makes the Engine target and the `engine` and `ui` tests.
+# Makes the Engine target and the `ui` test, which runs webui's tests against the built engine.
 
 include_guard(GLOBAL)
+
+# Here, as it does nothing inside a function
+enable_testing()
 
 include(${CMAKE_CURRENT_LIST_DIR}/BuildInfo.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/Core.cmake)
@@ -87,12 +90,10 @@ function(add_wasm_demo)
         OUTPUT_NAME "engine"
         SUFFIX ".wasm")
 
-    find_program(NODE_EXECUTABLE node REQUIRED)
     find_program(NPM_EXECUTABLE npm REQUIRED)
 
     set(uiDir "${CMAKE_CURRENT_SOURCE_DIR}/../webui")
-    set(webModules "${uiDir}/node_modules/@samplerealm/modules/web")
-    # The same commit as webModules, and here before npm has installed anything
+    # The commit npm installs into webui, and here before npm has run
     cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)
 
     # Uploaded as demos/<this folder>/
@@ -102,7 +103,7 @@ function(add_wasm_demo)
     file(WRITE "${CMAKE_BINARY_DIR}/demo-folder" "${demoFolder}")
 
     file(GLOB_RECURSE uiInputs CONFIGURE_DEPENDS
-        "${uiDir}/src/*" "${modulesRepoDir}/web/*" "${uiDir}/package*.json" "${uiDir}/vite.config.ts"
+        "${uiDir}/src/*" "${uiDir}/public/demo/*" "${modulesRepoDir}/web/*" "${uiDir}/package*.json" "${uiDir}/vite.config.ts"
         "${CMAKE_CURRENT_SOURCE_DIR}/../Assets/*")
     list(FILTER uiInputs EXCLUDE REGEX "/src/plugin/")
 
@@ -131,14 +132,7 @@ function(add_wasm_demo)
 
     add_custom_target(Demo ALL DEPENDS "${demoDir}/engine.wasm")
 
-    enable_testing()
-
-    # Node won't run the TypeScript of a fetched copy without this
-    add_test(NAME engine
-        COMMAND ${NODE_EXECUTABLE} --import "${webModules}/testing/typescript.mjs"
-                --test "${CMAKE_CURRENT_SOURCE_DIR}/engine.test.mjs"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
+    # webui/test/, which plays the built engine too
     add_test(NAME ui
         COMMAND ${NPM_EXECUTABLE} test
         WORKING_DIRECTORY "${uiDir}")

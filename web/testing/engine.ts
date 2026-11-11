@@ -40,7 +40,8 @@ export function engineAt(wasmPath: string) {
       return outputs;
     };
 
-    return { ...engine, info, set, view, processBlocks };
+    // `engine` is the wasm's own exports, for what this doesn't wrap
+    return { engine, info, set, view, processBlocks };
   };
 }
 

@@ -29,21 +29,8 @@ CPMAddPackage(
       juce-framework/JUCE
 )
 
-CPMAddPackage(
-    NAME
-      Catch2
-    GIT_TAG
-      v3.16.0
-    GITHUB_REPOSITORY
-      catchorg/Catch2
-    EXCLUDE_FROM_ALL
-      YES
-    SYSTEM
-      YES
-)
-
-list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
-include(Catch)
+# For Catch2, as a plugin's tests get it
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Tests.cmake)
 
 # The company names the salt and the licence file, as a plugin's does
 juce_add_console_app(ModulesTests COMPANY_NAME Example VERSION 0.0.1)

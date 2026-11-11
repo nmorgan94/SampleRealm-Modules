@@ -24,7 +24,9 @@ class EngineProcessor extends AudioWorkletProcessor {
 
     this.port.onmessage = ({ data }) => {
       if (data.type === 'param') this.engine.setParam(data.index, data.value);
-      else if (data.type === 'transport') this.engine.setTransport(data.bpm, data.playing, data.ppq);
+      // An effect's engine has no midi, a synth's no transport
+      else if (data.type === 'transport') this.engine.setTransport?.(data.bpm, data.playing, data.ppq);
+      else if (data.type === 'midi') this.engine.midi?.(data.bytes[0], data.bytes[1], data.bytes[2]);
     };
 
     this.port.postMessage({ type: 'ready' });
@@ -46,8 +48,8 @@ class EngineProcessor extends AudioWorkletProcessor {
     const frames = output[0].length;
 
     for (let channel = 0; channel < this.channels; channel++) {
-      // No input while the loop is paused
-      if (input[channel]) this.view(channel, frames).set(input[channel]);
+      // No input while the loop is paused, and never for a synth
+      if (input?.[channel]) this.view(channel, frames).set(input[channel]);
       else this.view(channel, frames).fill(0);
     }
 

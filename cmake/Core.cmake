@@ -7,7 +7,12 @@
 
 include_guard(GLOBAL)
 
+include(${CMAKE_CURRENT_LIST_DIR}/BuildInfo.cmake)
+
 function(add_plugin_core target)
     # PUBLIC, so the plugin's tests get it too
     target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../core")
+
+    # For <samplerealm/BuildCommit.h>
+    add_build_info(${target})
 endfunction()

@@ -10,8 +10,10 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | `Tests/` | The module's tests, `LicenceFixtures.h` and the test licences |
 | `Tests/plugin/` | Tests built into every plugin's own tests: its company name, and that it never trusts the test key |
 | `core/samplerealm/` | Headers a plugin and its wasm engine share: parameter specs and values, the UI info, the transport, the peak meter |
-| `cmake/Core.cmake` | `add_plugin_core(<target>)`, which puts them on the include path as `<samplerealm/...>` |
-| `cmake/BuildInfo.cmake` | `add_build_info(<target>)`: the plugin repo's commit as `buildCommit` (`<samplerealm/BuildCommit.h>`) |
+| `cmake/Core.cmake` | `add_plugin_core(<target>)`, which puts them on the include path as `<samplerealm/...>`, with the plugin repo's commit as `buildCommit` (`cmake/BuildInfo.cmake`) |
+| `cmake/Tests.cmake` | `add_unit_tests(<plugin target>)`: the plugin's `Tests/` as a Catch2 executable, registered with CTest |
+| `cmake/Pluginval.cmake` | `add_pluginval_tests(<plugin target>)`: pluginval built from source and run on each plugin format |
+| `cmake/WebUi.cmake` | `add_webview_ui(<plugin target>)`: the plugin's `webui/` built into it for a WebView editor |
 | `cmake/WasmDemo.cmake` | `add_wasm_demo(SOURCES ...)`: the web demo's engine and page, with the JUCE patch it needs |
 | `web/` | TypeScript for a plugin's `webui/`, as the npm package `@samplerealm/modules` |
 | `Tests/web/` | Its tests |
@@ -55,6 +57,10 @@ npm ci && npm run typecheck && npm test  # web/
   depend on them. `Tests/LicenceTests.cpp` holds the known answer.
 - `Tests/fixtures/licence/` is copied from the website. Plugin builds must never trust the test key,
   and its private half must never be copied here.
+- A plugin's wasm engine exports `uiInfo()`, `prepare(sampleRate, channels)`, `setParam(index, value)`,
+  `channel(index)` (its buffers: an effect's input is written there, and the output read back),
+  `render(numSamples)` and `peak(index)`. An effect adds `setTransport(bpm, playing, ppq)`, a synth
+  `midi(status, data1, data2)`. `web/demo/processor.js` and `web/testing/engine.ts` rely on these.
 - `core/` builds for wasm: `juce_core` and `juce_audio_basics` only, and no `juce::String`, `var`,
   `JSON`, printf or `to_chars`.
 - To try a change in a plugin before pushing, make its line `"file:../../SampleRealm-Modules"` and

@@ -64,6 +64,59 @@ test('the transport and the level pass between the page and the worklet', () => 
   assert.deepEqual(heard, [[0.5, 0.25]]);
 });
 
+test('notes and midi reach a synth\'s worklet as three bytes, those played early once it attaches', () => {
+  const backend = workletBackend(info, { storageKey: KEY });
+  backend.noteOn(60);
+
+  const { port, posted } = fakePort();
+  backend.attach(port);
+  backend.noteOn(64, 80);
+  backend.noteOff(60);
+  backend.midi(Uint8Array.of(0xe0, 0, 64));
+  backend.midi([0xc0, 5]);
+
+  assert.deepEqual(posted, [
+    { type: 'midi', bytes: [0x90, 60, 100] },
+    { type: 'midi', bytes: [0x90, 64, 80] },
+    { type: 'midi', bytes: [0x80, 60, 0] },
+    { type: 'midi', bytes: [0xe0, 0, 64] },
+    { type: 'midi', bytes: [0xc0, 5, 0] },
+  ]);
+});
+
+test('system messages and bytes with no status never reach the worklet', () => {
+  const backend = workletBackend(info, { storageKey: KEY });
+  const { port, posted } = fakePort();
+  backend.attach(port);
+
+  backend.midi([0xf8]);
+  backend.midi([0xfe]);
+  backend.midi([0xf0, 0x7e, 0x01, 0x02, 0xf7]);
+  backend.midi([60, 100]);
+  backend.midi([]);
+  backend.midi([0xef, 0, 64]);
+
+  assert.deepEqual(posted, [{ type: 'midi', bytes: [0xef, 0, 64] }]);
+});
+
+test('a note or velocity that isn\'t a whole number from 0 to 127 is rounded and kept in range', () => {
+  const backend = workletBackend(info, { storageKey: KEY });
+  const { port, posted } = fakePort();
+  backend.attach(port);
+
+  backend.noteOn(60.4, 0.8);
+  backend.noteOn(130, 200);
+  backend.noteOff(-3);
+  backend.noteOff(127.6);
+
+  assert.deepEqual(posted, [
+    { type: 'midi', bytes: [0x90, 60, 1] },
+    { type: 'midi', bytes: [0x90, 127, 127] },
+    { type: 'midi', bytes: [0x80, 0, 0] },
+    { type: 'midi', bytes: [0x80, 127, 0] },
+  ]);
+});
+
 test('a factory preset sets its parameters, and the rest go to their defaults', async () => {
   const backend = workletBackend(info, { storageKey: KEY, factoryPresets: [preset('Quiet', -12)] });
   backend.setValue('tone', 9);

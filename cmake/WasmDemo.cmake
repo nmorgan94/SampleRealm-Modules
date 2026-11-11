@@ -11,8 +11,8 @@ include_guard(GLOBAL)
 # Here, as it does nothing inside a function
 enable_testing()
 
-include(${CMAKE_CURRENT_LIST_DIR}/BuildInfo.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/Core.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/WebUi.cmake)
 
 function(add_wasm_demo)
     cmake_parse_arguments(PARSE_ARGV 0 arg "" "" "SOURCES")
@@ -76,7 +76,6 @@ function(add_wasm_demo)
 
     target_include_directories(Engine PRIVATE ../Source)
 
-    add_build_info(Engine)
     add_plugin_core(Engine)
 
     target_compile_definitions(Engine PRIVATE JUCE_STANDALONE_APPLICATION=1 PLUGIN_VERSION="${pluginVersion}")
@@ -90,11 +89,7 @@ function(add_wasm_demo)
         OUTPUT_NAME "engine"
         SUFFIX ".wasm")
 
-    find_program(NPM_EXECUTABLE npm REQUIRED)
-
-    set(uiDir "${CMAKE_CURRENT_SOURCE_DIR}/../webui")
-    # The commit npm installs into webui, and here before npm has run
-    cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)
+    cmake_path(SET uiDir NORMALIZE "${CMAKE_CURRENT_SOURCE_DIR}/../webui")
 
     # Uploaded as demos/<this folder>/
     set(demoFolder "${companyName}-${pluginName}-${pluginVersion}")
@@ -102,19 +97,7 @@ function(add_wasm_demo)
     # For CI to name its artifact
     file(WRITE "${CMAKE_BINARY_DIR}/demo-folder" "${demoFolder}")
 
-    file(GLOB_RECURSE uiInputs CONFIGURE_DEPENDS
-        "${uiDir}/src/*" "${uiDir}/public/demo/*" "${modulesRepoDir}/web/*" "${uiDir}/package*.json" "${uiDir}/vite.config.ts"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../Assets/*")
-    list(FILTER uiInputs EXCLUDE REGEX "/src/plugin/")
-
-    # npm writes this on every install
-    set(npmInstalled "${uiDir}/node_modules/.package-lock.json")
-
-    add_custom_command(OUTPUT "${npmInstalled}"
-        COMMAND ${NPM_EXECUTABLE} ci --no-audit --no-fund
-        WORKING_DIRECTORY "${uiDir}"
-        DEPENDS "${uiDir}/package.json" "${uiDir}/package-lock.json"
-        VERBATIM)
+    webui_sources("${uiDir}" "/src/plugin/|/public/plugin/" uiInputs npmInstalled)
 
     add_custom_command(OUTPUT "${demoDir}/index.html"
         COMMAND ${NPM_EXECUTABLE} run typecheck

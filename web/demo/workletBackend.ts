@@ -11,7 +11,19 @@ export type WorkletBackend = PluginBackend & {
   attach(port: EnginePort): void;
   // The page plays the host
   setTransport(transport: Transport): void;
+  // For a synth's engine: a status byte and up to two data bytes, rounded and kept to 0 to 127.
+  // System messages (clock, SysEx) are dropped
+  midi(bytes: ArrayLike<number>): void;
+  noteOn(note: number, velocity?: number): void;
+  noteOff(note: number): void;
 };
+
+const NOTE_ON = 0x90;
+const NOTE_OFF = 0x80;
+const FIRST_STATUS = 0x80;
+const FIRST_SYSTEM_STATUS = 0xf0;
+
+const dataByte = (value: number) => Math.min(127, Math.max(0, Math.round(value)));
 
 // A preset holds parameter values by id
 interface PresetState {
@@ -50,6 +62,12 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     found.listeners.notify(value);
   };
 
+  const midi = (bytes: ArrayLike<number>) => {
+    const status = bytes[0] ?? 0;
+    if (status < FIRST_STATUS || status >= FIRST_SYSTEM_STATUS) return;
+    post({ type: 'midi', bytes: [status, dataByte(bytes[1] ?? 0), dataByte(bytes[2] ?? 0)] });
+  };
+
   const presets = localPresets<PresetState>({
     storageKey,
     storage,
@@ -80,6 +98,9 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     subscribe: (id, listener) => entry(id).listeners.add(listener),
     onLevel: levelListeners.add,
     setTransport: (transport) => post({ type: 'transport', ...transport }),
+    midi,
+    noteOn: (note, velocity = 100) => midi([NOTE_ON, note, velocity]),
+    noteOff: (note) => midi([NOTE_OFF, note, 0]),
     attach: (enginePort) => {
       port = enginePort;
       port.onmessage = ({ data }) => {

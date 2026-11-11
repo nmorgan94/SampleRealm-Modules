@@ -1,9 +1,5 @@
 # buildCommit (<samplerealm/BuildCommit.h>): the plugin repo's short hash, with -local for
-# uncommitted changes, or unknown.
-#
-# Usage:
-#     include(${SampleRealm-Modules_SOURCE_DIR}/cmake/BuildInfo.cmake)
-#     add_build_info(${PROJECT_NAME})
+# uncommitted changes, or unknown. add_plugin_core calls add_build_info.
 
 # Run on every build by add_build_info's target; rewrites the header only when the value changes
 if(CMAKE_SCRIPT_MODE_FILE)
@@ -39,6 +35,11 @@ include_guard(GLOBAL)
 find_package(Git QUIET)
 
 function(add_build_info target)
+    # add_plugin_core calls this too
+    if(TARGET ${target}_BuildInfo)
+        return()
+    endif()
+
     set(header "${CMAKE_CURRENT_BINARY_DIR}/generated/BuildInfo.h")
 
     add_custom_target(${target}_BuildInfo

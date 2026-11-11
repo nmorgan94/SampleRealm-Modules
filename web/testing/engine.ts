@@ -1,4 +1,4 @@
-// A built effect engine under Node, driven as the demo's worklet drives it
+// A built engine under Node, driven as the demo's worklet drives it
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { instantiateEngine, readUiInfo } from '../demo/engine.ts';
@@ -40,8 +40,11 @@ export function engineAt(wasmPath: string) {
       return outputs;
     };
 
-    // `engine` is the wasm's own exports, for what this doesn't wrap
-    return { engine, info, set, view, processBlocks };
+    // A synth: nothing written in, each channel read back
+    const renderBlocks = (numSamples: number) => processBlocks(Array.from({ length: numChannels }, () => new Float32Array(numSamples)));
+
+    // `engine` is the wasm's own exports, for what this doesn't wrap: `engine.midi(status, data1, data2)`
+    return { engine, info, set, view, processBlocks, renderBlocks };
   };
 }
 

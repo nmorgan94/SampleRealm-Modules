@@ -31,7 +31,7 @@ function(webui_sources uiDir skip inputsVariable installedVariable)
     set(${installedVariable} "${installed}" PARENT_SCOPE)
 endfunction()
 
-# Builds webui's plugin page into the plugin as WebUIData.h
+# Builds webui's plugin page into the plugin, with the WebViewEditor that shows it
 function(add_webview_ui pluginTarget)
     set(uiDir "${CMAKE_CURRENT_SOURCE_DIR}/webui")
     set(webUiZip "${CMAKE_CURRENT_BINARY_DIR}/WebUI.zip")
@@ -52,9 +52,13 @@ function(add_webview_ui pluginTarget)
         NAMESPACE WebUIData
         SOURCES "${webUiZip}")
 
-    target_link_libraries(${pluginTarget} PRIVATE ${pluginTarget}_WebUI)
+    # webview_editor is built on the editor module
+    include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Editor.cmake)
 
-    if(APPLE)
-        set_source_files_properties(Source/webview/WebViewEditor.cpp PROPERTIES COMPILE_OPTIONS -xobjective-c++)
+    if(NOT TARGET webview_editor)
+        cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)
+        juce_add_module("${modulesRepoDir}/webview_editor")
     endif()
+
+    target_link_libraries(${pluginTarget} PRIVATE ${pluginTarget}_WebUI webview_editor)
 endfunction()

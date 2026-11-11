@@ -7,7 +7,10 @@
 #include <samplerealm/Transport.h>
 #include <samplerealm/UiInfoJson.h>
 
+#include "PluginTestHelpers.h"
+
 using Catch::Matchers::WithinAbs;
+using TestHelpers::makeConstantBuffer;
 
 namespace
 {
@@ -23,16 +26,6 @@ namespace
         constexpr Spec shape = choice ("shape", "Shape", shapeNames, 1);
 
         constexpr std::array all { &gain, &voices, &shape };
-    }
-
-    juce::AudioBuffer<float> makeConstantBuffer (int numChannels, int numSamples, float value)
-    {
-        juce::AudioBuffer<float> buffer (numChannels, numSamples);
-
-        for (int channel = 0; channel < numChannels; ++channel)
-            juce::FloatVectorOperations::fill (buffer.getWritePointer (channel), value, numSamples);
-
-        return buffer;
     }
 
     struct FakePlayHead : juce::AudioPlayHead

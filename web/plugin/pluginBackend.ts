@@ -1,4 +1,4 @@
-// The C++ side of these names is a plugin's Source/webview/WebViewEditor.cpp
+// The C++ side of these names is webview_editor/WebViewEditor.cpp
 import { getNativeFunction, getSliderState } from '@juce-framework/webview';
 import { listenerSet, paramLookup, type ActivationBackend, type ActivationStatus, type Level, type PluginBackend, type PresetBackend, type PresetEntry, type PresetStatus, type UiInfo } from '../backend.ts';
 import { toProportion } from '../editor/params.ts';

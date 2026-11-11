@@ -2,6 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "EditorFixtures.h"
+#include "StubPlugin.h"
 
 namespace
 {
@@ -49,34 +50,8 @@ TEST_CASE_METHOD (EditorFixtures::OverlayFixture, "The header's title, the manua
     // Outlive the header that holds them
     struct Parts
     {
-        juce::AudioProcessorValueTreeState::ParameterLayout parameters()
-        {
-            return { std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { "gain", 1 }, "Gain", 0.0f, 1.0f, 0.5f) };
-        }
-
-        struct Processor : juce::AudioProcessor
-        {
-            const juce::String getName() const override   { return "Test"; }
-            void prepareToPlay (double, int) override {}
-            void releaseResources() override {}
-            void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override {}
-            double getTailLengthSeconds() const override   { return 0.0; }
-            bool acceptsMidi() const override   { return false; }
-            bool producesMidi() const override   { return false; }
-            juce::AudioProcessorEditor* createEditor() override   { return nullptr; }
-            bool hasEditor() const override   { return false; }
-            int getNumPrograms() override   { return 1; }
-            int getCurrentProgram() override   { return 0; }
-            void setCurrentProgram (int) override {}
-            const juce::String getProgramName (int) override   { return {}; }
-            void changeProgramName (int, const juce::String&) override {}
-            void getStateInformation (juce::MemoryBlock&) override {}
-            void setStateInformation (const void*, int) override {}
-        };
-
-        Processor processor;
-        juce::AudioProcessorValueTreeState apvts { processor, nullptr, "STATE", parameters() };
-        PresetManager presets { apvts, {} };
+        StubPlugin::Processor processor;
+        PresetManager presets { processor.getAPVTS(), {} };
         PromptOverlay prompt;
         juce::Component meter;
     } parts;

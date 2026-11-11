@@ -65,6 +65,10 @@ function(add_unit_tests pluginTarget)
         "${CMAKE_CURRENT_SOURCE_DIR}/Source"
         $<TARGET_PROPERTY:${pluginTarget},INCLUDE_DIRECTORIES>)
 
+    # PluginTestHelpers.h and EditorFixtures.h
+    cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)
+    target_include_directories(${testTarget} PRIVATE "${modulesRepoDir}/Tests")
+
     target_link_libraries(${testTarget} PRIVATE
         ${pluginTarget}
         licensing::fixtures

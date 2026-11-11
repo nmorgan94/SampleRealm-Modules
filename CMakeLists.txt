@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.25)
+
+# Builds this repo's own tests. A plugin fetches the repo and includes cmake/*.cmake instead.
+
+set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "" FORCE)
+
+project(SampleRealmModules)
+
+enable_testing()
+
+set(CMAKE_CXX_STANDARD 23)
+
+set(CPM_DOWNLOAD_VERSION 0.43.1)
+set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
+
+if(NOT EXISTS ${CPM_DOWNLOAD_LOCATION})
+    message(STATUS "Downloading CPM.cmake to ${CPM_DOWNLOAD_LOCATION}")
+    file(DOWNLOAD https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake ${CPM_DOWNLOAD_LOCATION})
+endif()
+
+include(${CPM_DOWNLOAD_LOCATION})
+
+CPMAddPackage(
+    NAME
+      JUCE
+    GIT_TAG
+      9.0.2
+    GITHUB_REPOSITORY
+      juce-framework/JUCE
+)
+
+CPMAddPackage(
+    NAME
+      Catch2
+    GIT_TAG
+      v3.16.0
+    GITHUB_REPOSITORY
+      catchorg/Catch2
+    EXCLUDE_FROM_ALL
+      YES
+    SYSTEM
+      YES
+)
+
+list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
+include(Catch)
+
+# The company names the salt and the licence file, as a plugin's does
+juce_add_console_app(ModulesTests COMPANY_NAME Example VERSION 0.0.1)
+
+# A made-up key, so the generated key table isn't empty
+set(ENV{LICENCE_KEYS} "00000000000000aa:00000000000000000000000000000000000000000000000000000000000000aa")
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Licensing.cmake)
+add_licensing(ModulesTests)
+
+# Tests/plugin comes with licensing::fixtures
+file(GLOB TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
+
+target_sources(ModulesTests PRIVATE ${TestFiles})
+
+# A plugin has this from JUCE
+target_compile_definitions(ModulesTests PRIVATE JucePlugin_Manufacturer="Example")
+
+target_link_libraries(ModulesTests PRIVATE
+    licensing::fixtures
+    Catch2::Catch2WithMain
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags)
+
+catch_discover_tests(ModulesTests TEST_PREFIX "modules.unit.")

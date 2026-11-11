@@ -1,0 +1,29 @@
+name: CI
+
+# Runs only when started by hand, from the Actions tab or `gh workflow run ci.yml`
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+    steps:
+      - uses: actions/checkout@v7
+
+      # Keeps JUCE, Monocypher and Catch2 between runs; after an edit to the CMake files only a changed pin is fetched
+      - uses: actions/cache@v6
+        with:
+          path: .cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/*.cmake') }}
+          restore-keys: cpm-${{ runner.os }}-
+
+      - name: Tests (Release)
+        run: cmake --workflow --preset test-release

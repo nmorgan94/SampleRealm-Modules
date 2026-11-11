@@ -1,0 +1,48 @@
+{
+  "warning": "TEST ONLY. Every licence here is signed by test-key.json or by no trusted key.",
+  "machine": "K7Q2M9XH4TBV8RNC",
+  "cases": [
+    {
+      "file": "valid.licence",
+      "expect": "valid",
+      "why": "Signed by the test key.",
+      "payload": {
+        "v": 1,
+        "keyId": "0296d3c338aedaef",
+        "machine": "K7Q2M9XH4TBV8RNC",
+        "tier": "free",
+        "issued": "2026-11-10"
+      }
+    },
+    {
+      "file": "tampered-payload.licence",
+      "expect": "signature",
+      "why": "valid.licence's signature on a payload with one machine character changed."
+    },
+    {
+      "file": "tampered-signature.licence",
+      "expect": "signature",
+      "why": "valid.licence with one bit of its signature flipped."
+    },
+    {
+      "file": "wrong-key.licence",
+      "expect": "signature",
+      "why": "valid.licence's payload, test keyId included, signed by a key nobody trusts."
+    },
+    {
+      "file": "unknown-key-id.licence",
+      "expect": "payload",
+      "why": "Signed by the test key but naming another keyId."
+    },
+    {
+      "file": "malformed.licence",
+      "expect": "malformed",
+      "why": "valid.licence with its \".\" separator removed."
+    },
+    {
+      "file": "non-canonical-base64.licence",
+      "expect": "malformed",
+      "why": "valid.licence with its last character changed in bits base64url leaves unused; a lenient decoder reads the same signature."
+    }
+  ]
+}

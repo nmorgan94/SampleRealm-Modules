@@ -11,7 +11,8 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | --- | --- |
 | `core/samplerealm/` | Headers the plugin and its wasm engine share: parameter specs and values, UI info, transport, peak meter |
 | `licensing/` | JUCE module: machine code, offline licence verification, activation |
-| `editor/` | JUCE module: header bar, presets, overlays, activation bar, About, `LabeledSlider`, `LevelMeter`, `createParameterLayout` |
+| `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs neither of the two below |
+| `editor/` | JUCE module: header bar, presets, overlays, activation bar, About, on top of `controls/` |
 | `webview_editor/` | JUCE module: `WebViewEditor`, the native side of `web/plugin/pluginBackend.ts` |
 
 ### CMake
@@ -22,7 +23,8 @@ Each file starts with how to call it.
 | --- | --- |
 | `cmake/Core.cmake` | `add_plugin_core(<target>)`: `<samplerealm/...>` and `buildCommit` |
 | `cmake/Licensing.cmake` | `add_licensing(<plugin target>)`, and `licensing::fixtures` for its tests |
-| `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`: `<editor/editor.h>` |
+| `cmake/Controls.cmake` | `add_plugin_controls(<plugin target>)`: `<controls/controls.h>` |
+| `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`: `<editor/editor.h>`, with controls and licensing |
 | `cmake/WebUi.cmake` | `add_webview_ui(<plugin target>)`: `webui/` built into the plugin, and `<webview_editor/webview_editor.h>` |
 | `cmake/WasmDemo.cmake` | `add_wasm_demo(SOURCES ...)`: the web demo's engine and page |
 | `cmake/Tests.cmake` | `add_unit_tests(<plugin target>)`: the plugin's `Tests/` with Catch2 and CTest |
@@ -35,7 +37,7 @@ The npm package `@samplerealm/modules`. Imports name the file: `@samplerealm/mod
 | Folder | Holds |
 | --- | --- |
 | `web/backend.ts` | The contract between an editor and what runs it |
-| `web/editor/` | The React twins of `editor/`, with the menu, text button, parameter maths and `useParam` |
+| `web/editor/` | The React twins of `controls/` and `editor/`, with the menu, text button, parameter maths and `useParam` |
 | `web/plugin/` | `pluginBackend`, the backend inside a WebView |
 | `web/demo/` | The web demo: frame, engine loading, worklet backend, local presets (`processor.js` is imported with `?url`) |
 | `web/build/` | `webuiConfig`, for the plugin's `webui/vite.config.ts` |
@@ -77,6 +79,9 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 
 ### A plugin without the header
 
+- Its native build calls `add_plugin_controls` in place of `add_plugin_editor`, and includes
+  `<controls/controls.h>`: no header, presets, overlays or licensing are compiled in. Its WebView
+  build still gets them, as `webview_editor` is built on `editor`; `add_webview_ui` brings them in.
 - `WebViewEditor::Plugin` takes `presets` and `meter` as pointers, null by default. Its page then
   uses `editorBackend()`, an `EditorBackend`, in place of `pluginBackend()`, adding `onLevel` if it has a meter.
 - `DemoFrame` takes an `overlay`, shown over the editor without being scaled with it.
@@ -90,7 +95,8 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 ### A plugin without activation
 
 It has no licensing code: it leaves out `add_licensing`, `PLUGIN_REQUIRE_ACTIVATION`, `Plugin::activation`
-and the activation bar. `add_plugin_editor` brings the licensing module in with no keys.
+and the activation bar. With `add_plugin_editor`, the licensing module comes in with no keys; with
+`add_plugin_controls` alone it isn't there at all.
 
 ### What the plugin supplies to the editor
 

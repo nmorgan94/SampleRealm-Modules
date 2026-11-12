@@ -54,15 +54,10 @@ private:
     bool activationBarShowing = false;
     int ticksSinceActivationCheck = 0;
 
-    template <typename Relay>
-    using RelaysBySpec = std::vector<std::pair<const ParameterSpecs::Spec*, std::unique_ptr<Relay>>>;
-
     // Declaration order matters: relays, browser, attachments
-    RelaysBySpec<juce::WebSliderRelay> sliderRelays;
-    RelaysBySpec<juce::WebToggleButtonRelay> toggleRelays;
+    std::vector<std::unique_ptr<juce::WebSliderRelay>> relays;
     std::unique_ptr<juce::WebBrowserComponent> browser;
-    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> sliderAttachments;
-    std::vector<std::unique_ptr<juce::WebToggleButtonParameterAttachment>> toggleAttachments;
+    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> attachments;
 
     juce::uint32 lastPresetChange = 0;
 

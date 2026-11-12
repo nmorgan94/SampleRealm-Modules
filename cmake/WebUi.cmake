@@ -60,5 +60,8 @@ function(add_webview_ui pluginTarget)
         juce_add_module("${modulesRepoDir}/webview_editor")
     endif()
 
+    # For a plugin whose native editor needs only add_plugin_controls
+    add_plugin_editor(${pluginTarget})
+
     target_link_libraries(${pluginTarget} PRIVATE ${pluginTarget}_WebUI webview_editor)
 endfunction()

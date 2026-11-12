@@ -6,8 +6,9 @@
 
 include_guard(GLOBAL)
 
-# The activation bar is built on it
+# The activation bar is built on licensing, and the header's meter is in controls
 include(${CMAKE_CURRENT_LIST_DIR}/Licensing.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/Controls.cmake)
 
 cmake_path(GET CMAKE_CURRENT_LIST_DIR PARENT_PATH modulesRepoDir)
 
@@ -16,6 +17,8 @@ juce_add_module("${modulesRepoDir}/editor")
 function(add_plugin_editor pluginTarget)
     # Does nothing for a plugin that called it already
     add_licensing(${pluginTarget})
+
+    add_plugin_controls(${pluginTarget})
 
     target_link_libraries(${pluginTarget} PRIVATE editor)
 endfunction()

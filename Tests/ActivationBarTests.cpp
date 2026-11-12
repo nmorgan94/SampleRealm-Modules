@@ -1,3 +1,5 @@
+#include <editor/editor.h>
+
 #include "EditorFixtures.h"
 #include "LicenceFixtures.h"
 

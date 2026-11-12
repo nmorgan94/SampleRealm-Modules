@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <editor/editor.h>
+
 #include "EditorFixtures.h"
 
 using EditorFixtures::OverlayFixture;

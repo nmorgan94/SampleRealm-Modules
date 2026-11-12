@@ -83,13 +83,9 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
       plugin (pluginToShow),
       uiZipStream (WebUIData::WebUI_zip, static_cast<size_t> (WebUIData::WebUI_zipSize), false)
 {
+    // A slider relay carries every kind: a toggle is 0 or 1 in steps of 1
     for (const auto* spec : plugin.specs)
-    {
-        if (spec->kind == ParameterSpecs::Kind::toggle)
-            toggleRelays.emplace_back (spec, std::make_unique<juce::WebToggleButtonRelay> (spec->id));
-        else
-            sliderRelays.emplace_back (spec, std::make_unique<juce::WebSliderRelay> (spec->id));
-    }
+        relays.push_back (std::make_unique<juce::WebSliderRelay> (spec->id));
 
     if (plugin.presets != nullptr)
         lastPresetChange = plugin.presets->getChangeCounter();
@@ -103,21 +99,16 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
     browser = std::make_unique<SinglePageBrowser> (createOptions());
     hideMacWebViewBackground (*browser);
 
-    // Every spec needs its parameter
-    const auto parameterOf = [this] (const ParameterSpecs::Spec* spec)
+    for (size_t i = 0; i < relays.size(); ++i)
     {
-        auto* parameter = plugin.parameters.getParameter (spec->id);
+        auto* parameter = plugin.parameters.getParameter (plugin.specs[i]->id);
+
+        // Every spec needs its parameter
         jassert (parameter != nullptr);
-        return parameter;
-    };
 
-    for (auto& [spec, relay] : sliderRelays)
-        if (auto* parameter = parameterOf (spec))
-            sliderAttachments.push_back (std::make_unique<juce::WebSliderParameterAttachment> (*parameter, *relay, nullptr));
-
-    for (auto& [spec, relay] : toggleRelays)
-        if (auto* parameter = parameterOf (spec))
-            toggleAttachments.push_back (std::make_unique<juce::WebToggleButtonParameterAttachment> (*parameter, *relay, nullptr));
+        if (parameter != nullptr)
+            attachments.push_back (std::make_unique<juce::WebSliderParameterAttachment> (*parameter, *relays[i], nullptr));
+    }
 
     // Drop anything played while no meter was showing
     if (plugin.meter != nullptr)
@@ -141,11 +132,8 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
                        .withNativeIntegrationEnabled()
                        .withResourceProvider ([this] (const auto& url) { return getResource (url); });
 
-    for (auto& entry : sliderRelays)
-        options = options.withOptionsFrom (*entry.second);
-
-    for (auto& entry : toggleRelays)
-        options = options.withOptionsFrom (*entry.second);
+    for (auto& relay : relays)
+        options = options.withOptionsFrom (*relay);
 
     return withActivationFunctions (withPresetFunctions (options))
         .withInitialisationData ("uiInfo", juce::String (uiInfoJson (plugin.specs, JucePlugin_VersionString, buildCommit)))

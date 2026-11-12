@@ -1,4 +1,4 @@
-// Mirrors editor/LevelMeter.h
+// Mirrors controls/LevelMeter.h
 import { useEffect, useRef, useState } from 'react';
 import type { PluginBackend } from '../backend.ts';
 import { centred } from './layout.ts';

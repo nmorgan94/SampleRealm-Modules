@@ -2,7 +2,7 @@
 # each test case with CTest. The tests drive the AudioProcessor directly, the way a host
 # would, so they check what the plugin does to audio and state rather than just that it loads.
 #
-# Usage (from the top-level CMakeLists.txt, AFTER juce_add_plugin, add_pluginval_tests and add_plugin_editor):
+# Usage (from the top-level CMakeLists.txt, AFTER juce_add_plugin, add_pluginval_tests and add_plugin_editor or add_plugin_controls):
 #     include(${SampleRealm-Modules_SOURCE_DIR}/cmake/Tests.cmake)
 #     add_unit_tests(${PROJECT_NAME})
 
@@ -71,8 +71,12 @@ function(add_unit_tests pluginTarget)
 
     target_link_libraries(${testTarget} PRIVATE
         ${pluginTarget}
-        licensing::fixtures
         Catch2::Catch2WithMain)
+
+    # Not there for a plugin with add_plugin_controls alone
+    if(TARGET licensing::fixtures)
+        target_link_libraries(${testTarget} PRIVATE licensing::fixtures)
+    endif()
 
     catch_discover_tests(${testTarget} TEST_PREFIX "${pluginTarget}.unit.")
 

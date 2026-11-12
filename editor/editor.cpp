@@ -1,6 +1,5 @@
 #include "editor.h"
 
-#include "ParameterLayout.cpp"
 #include "Manual.cpp"
 #include "PresetManager.cpp"
 #include "PresetActions.cpp"

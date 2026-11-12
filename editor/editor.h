@@ -5,8 +5,8 @@
   vendor:             SampleRealm
   version:            1.0.0
   name:               Editor
-  description:        The parts every plugin's editor shares: the header, presets, overlays, the activation bar, the labelled slider and the level meter, with the parameter layout made from the specs.
-  dependencies:       juce_audio_processors, juce_gui_basics, licensing
+  description:        The header, presets, overlays and the activation bar, on top of the controls module.
+  dependencies:       juce_audio_processors, juce_gui_basics, licensing, controls
   minimumCppStandard: 20
 
  END_JUCE_MODULE_DECLARATION
@@ -25,13 +25,9 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <licensing/licensing.h>
-#include <samplerealm/ParameterSpec.h>
-#include <samplerealm/PeakMeter.h>
+#include <controls/controls.h>
 
-#include "ParameterLayout.h"
 #include "EditorFonts.h"
-#include "LabeledSlider.h"
-#include "LevelMeter.h"
 #include "ModalOverlay.h"
 #include "PromptOverlay.h"
 #include "Manual.h"

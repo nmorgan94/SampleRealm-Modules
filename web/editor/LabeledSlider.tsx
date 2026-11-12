@@ -1,4 +1,4 @@
-// Mirrors editor/LabeledSlider.h and how LookAndFeel_V4 draws it
+// Mirrors controls/LabeledSlider.h and how LookAndFeel_V4 draws it
 import { useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
 import type { EditorBackend } from '../backend.ts';
 import { juceHeight } from './fonts.ts';
@@ -48,7 +48,7 @@ function RotaryGraphic({ width, height, proportion }: RotaryProps) {
 
 type DragStart = { x: number; y: number; proportion: number };
 
-// editor/LabeledSlider.h
+// controls/LabeledSlider.h
 const NAME_DELAY_MS = 600;
 
 // LabeledSlider::styleLabel, as the props of the label's element

@@ -1,6 +1,6 @@
 // The C++ side of these names is webview_editor/WebViewEditor.cpp
-import { getNativeFunction, getSliderState, getToggleState } from '@juce-framework/webview';
-import { listenerSet, paramLookup, type ActivationBackend, type ActivationStatus, type EditorBackend, type Level, type ParamInfo, type PluginBackend, type PresetBackend, type PresetEntry, type PresetStatus, type UiInfo } from '../backend.ts';
+import { getNativeFunction, getSliderState } from '@juce-framework/webview';
+import { listenerSet, paramLookup, type ActivationBackend, type ActivationStatus, type EditorBackend, type Level, type PluginBackend, type PresetBackend, type PresetEntry, type PresetStatus, type UiInfo } from '../backend.ts';
 import { toProportion } from '../editor/params.ts';
 
 // JUCE's type lists only its own initialisation data. presetStatus is there when the plugin has presets
@@ -68,44 +68,6 @@ function pluginPresets(initial: PresetStatus): PresetBackend {
   };
 }
 
-type Control = {
-  get(): number;
-  set(value: number): void;
-  begin(): void;
-  end(): void;
-  onChange(listener: () => void): () => void;
-};
-
-type ValueChangedEvent = ReturnType<typeof getSliderState>['valueChangedEvent'];
-
-const listen = (event: ValueChangedEvent) => (listener: () => void) => {
-  const handle = event.addListener(listener);
-  return () => event.removeListener(handle);
-};
-
-// A WebToggleButtonRelay for toggles, a WebSliderRelay for the rest
-function control(param: ParamInfo): Control {
-  if (param.kind === 'toggle') {
-    const state = getToggleState(param.id);
-    return {
-      get: () => (state.getValue() ? 1 : 0),
-      set: (value) => state.setValue(value >= 0.5),
-      begin: () => {},
-      end: () => {},
-      onChange: listen(state.valueChangedEvent),
-    };
-  }
-
-  const state = getSliderState(param.id);
-  return {
-    get: () => state.getScaledValue(),
-    set: (value) => state.setNormalisedValue(toProportion(param, value)),
-    begin: () => state.sliderDragStarted(),
-    end: () => state.sliderDragEnded(),
-    onChange: listen(state.valueChangedEvent),
-  };
-}
-
 const initialisationData = () => window.__JUCE__.initialisationData as unknown as InitialisationData;
 
 // What WebViewEditor emits, a plugin's own events from Plugin::onTick included. Returns how to stop listening
@@ -122,23 +84,26 @@ export function editorBackend(data = initialisationData()): EditorBackend {
   const { uiInfo, activationStatus, running } = data;
   const activation = JSON.parse(activationStatus[0]) as ActivationStatus;
   const info = JSON.parse(uiInfo[0]) as UiInfo;
-  const entry = paramLookup(new Map(info.params.map((param) => [param.id, { param, control: control(param) }])));
+  // A slider state for every kind, as WebViewEditor's relays
+  const entry = paramLookup(new Map(info.params.map((param) => [param.id, { param, slider: getSliderState(param.id) }])));
 
-  const controlOf = (id: string) => entry(id).control;
+  const param = (id: string) => entry(id).param;
+  const slider = (id: string) => entry(id).slider;
 
   return {
     info,
     running: running[0],
     // Its functions exist only where the bar could show
     activation: activation.show ? pluginActivation(activation) : undefined,
-    param: (id) => entry(id).param,
-    getValue: (id) => controlOf(id).get(),
-    setValue: (id, value) => controlOf(id).set(value),
-    beginGesture: (id) => controlOf(id).begin(),
-    endGesture: (id) => controlOf(id).end(),
+    param,
+    getValue: (id) => slider(id).getScaledValue(),
+    setValue: (id, value) => slider(id).setNormalisedValue(toProportion(param(id), value)),
+    beginGesture: (id) => slider(id).sliderDragStarted(),
+    endGesture: (id) => slider(id).sliderDragEnded(),
     subscribe: (id, listener) => {
-      const found = controlOf(id);
-      return found.onChange(() => listener(found.get()));
+      const state = slider(id);
+      const handle = state.valueChangedEvent.addListener(() => listener(state.getScaledValue()));
+      return () => state.valueChangedEvent.removeListener(handle);
     },
   };
 }

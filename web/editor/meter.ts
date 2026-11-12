@@ -1,4 +1,4 @@
-// Mirrors LevelMeter::Ballistics in editor/LevelMeter.h
+// Mirrors LevelMeter::Ballistics in controls/LevelMeter.h
 export const UPDATE_HZ = 30;
 export const CLIP_HOLD_TICKS = 2 * UPDATE_HZ;
 export const FLOOR_DB = -60;

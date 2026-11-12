@@ -7,8 +7,8 @@
 # The plugin's tests link licensing::fixtures for LicenceFixtures.h, the test licences, and the
 # tests of the plugin's own company name, product name and keys.
 #
-# A plugin that never asks for activation needn't call it: add_plugin_editor does, as the editor
-# module is built on this one, and with no keys no licence verifies.
+# A plugin that never asks for activation doesn't call it, and has no licensing code. One that
+# does calls add_plugin_activation, which calls this.
 
 include_guard(GLOBAL)
 
@@ -43,7 +43,7 @@ juce_add_module("${modulesRepoDir}/licensing")
 target_link_libraries(licensing INTERFACE monocypher)
 
 function(add_licensing pluginTarget)
-    # add_plugin_editor calls this too
+    # add_plugin_activation calls this too
     get_target_property(alreadyAdded ${pluginTarget} SAMPLEREALM_LICENSING_ADDED)
 
     if(alreadyAdded)

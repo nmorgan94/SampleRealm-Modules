@@ -13,10 +13,24 @@ namespace
                     juce::AudioParameterIntAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
 
             case ParameterSpecs::Kind::choice:
+            {
+                const juce::StringArray choices (spec.choices.data(), static_cast<int> (spec.choices.size()));
+
+                // As web/editor/params.ts parseValue: a name in any case, then a number
+                const auto indexFromText = [choices] (const juce::String& text)
+                {
+                    for (int index = 0; index < choices.size(); ++index)
+                        if (text.trim().equalsIgnoreCase (choices[index]))
+                            return index;
+
+                    return juce::roundToInt (text.getDoubleValue());
+                };
+
                 return std::make_unique<juce::AudioParameterChoice> (
-                    id, spec.name, juce::StringArray (spec.choices.data(), static_cast<int> (spec.choices.size())),
-                    juce::roundToInt (spec.defaultValue),
-                    juce::AudioParameterChoiceAttributes().withAutomatable (spec.automatable));
+                    id, spec.name, choices, juce::roundToInt (spec.defaultValue),
+                    juce::AudioParameterChoiceAttributes().withValueFromStringFunction (indexFromText)
+                                                           .withAutomatable (spec.automatable));
+            }
 
             case ParameterSpecs::Kind::toggle:
                 return std::make_unique<juce::AudioParameterBool> (

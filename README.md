@@ -11,8 +11,9 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | --- | --- |
 | `core/samplerealm/` | Headers the plugin and its wasm engine share: parameter specs and values, UI info, transport, peak meter |
 | `licensing/` | JUCE module: machine code, offline licence verification, activation |
-| `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs neither of the two below |
-| `editor/` | JUCE module: header bar, presets, overlays, activation bar, About, on top of `controls/` |
+| `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs none of the modules below |
+| `editor/` | JUCE module: header bar, presets, overlays, About, on top of `controls/`. No licensing |
+| `activation/` | JUCE module: the activation bar, on `editor/` and `licensing/` |
 | `webview_editor/` | JUCE module: `WebViewEditor`, the native side of `web/plugin/pluginBackend.ts` |
 
 ### CMake
@@ -24,7 +25,8 @@ Each file starts with how to call it.
 | `cmake/Core.cmake` | `add_plugin_core(<target>)`: `<samplerealm/...>` and `buildCommit` |
 | `cmake/Licensing.cmake` | `add_licensing(<plugin target>)`, and `licensing::fixtures` for its tests |
 | `cmake/Controls.cmake` | `add_plugin_controls(<plugin target>)`: `<controls/controls.h>` |
-| `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`: `<editor/editor.h>`, with controls and licensing |
+| `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`: `<editor/editor.h>`, with controls |
+| `cmake/Activation.cmake` | `add_plugin_activation(<plugin target>)`: `<activation/activation.h>`, with the editor and licensing |
 | `cmake/WebUi.cmake` | `add_webview_ui(<plugin target>)`: `webui/` built into the plugin, and `<webview_editor/webview_editor.h>` |
 | `cmake/WasmDemo.cmake` | `add_wasm_demo(SOURCES ...)`: the web demo's engine and page |
 | `cmake/Tests.cmake` | `add_unit_tests(<plugin target>)`: the plugin's `Tests/` with Catch2 and CTest |
@@ -48,6 +50,7 @@ The npm package `@samplerealm/modules`. Imports name the file: `@samplerealm/mod
 | Folder | Holds |
 | --- | --- |
 | `Tests/` | The C++ tests, and headers a plugin's tests include: `LicenceFixtures.h`, `EditorFixtures.h`, `PluginTestHelpers.h` |
+| `Tests/editor-only/` | The editor built as a plugin without activation has it, with no licensing |
 | `Tests/plugin/` | Tests built into every plugin's tests through `licensing::fixtures`: its company and product names, and that it never trusts the test key |
 | `Tests/fixtures/licence/` | The test key and licences, copied from the website |
 | `Tests/web/` | The web tests |
@@ -80,8 +83,8 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 ### A plugin without the header
 
 - Its native build calls `add_plugin_controls` in place of `add_plugin_editor`, and includes
-  `<controls/controls.h>`: no header, presets, overlays or licensing are compiled in. Its WebView
-  build still gets them, as `webview_editor` is built on `editor`; `add_webview_ui` brings them in.
+  `<controls/controls.h>`: no header, presets or overlays are compiled in. Its WebView build still
+  gets them, as `webview_editor` is built on `editor`; `add_webview_ui` brings them in, without licensing.
 - `WebViewEditor::Plugin` takes `presets` and `meter` as pointers, null by default. Its page then
   uses `editorBackend()`, an `EditorBackend`, in place of `pluginBackend()`, adding `onLevel` if it has a meter.
 - `DemoFrame` takes an `overlay`, shown over the editor without being scaled with it.
@@ -89,14 +92,22 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `Plugin::onTick` sends the plugin's own events to the page, and `Plugin::background` is its colour.
 - `LabeledSlider.tsx` takes the plugin's `rotary` drawing, a `unit`, and a `labelClassName` for
   what its LookAndFeel's `drawLabel` adds, such as a box behind the name.
+- The name goes above with `setNamePlacement` / `namePlacement="above"`, sized by `setNameHeight` / `nameHeight`.
+  Native drag distance and value text are the slider's own; the web's are `pixelsForFullDrag` and `valueText`.
+- A choice parameter reads a typed name in any case, then a number, natively and in `parseValue`.
+- `engineAt(path)(channels, rate)` takes a sample rate, or `null` for an engine never prepared.
+- `HeaderBar` takes a `Title { bold, regular }`, and `HeaderBar.tsx` a `{ bold, regular }`, for a title in two weights.
+- `LevelMeter.tsx` takes `channels`, the bars shown before the first level.
+- `TestHelpers::process (processor, buffer, message)` plays one MIDI message at the start of the block, for a synth.
 - A `toggle (...)` spec is an `AudioParameterBool`; `notAutomatable (...)` around any spec keeps hosts from automating it.
 - `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits.
 
 ### A plugin without activation
 
-It has no licensing code: it leaves out `add_licensing`, `PLUGIN_REQUIRE_ACTIVATION`, `Plugin::activation`
-and the activation bar. With `add_plugin_editor`, the licensing module comes in with no keys; with
-`add_plugin_controls` alone it isn't there at all.
+It has no licensing code: it calls `add_plugin_editor` or `add_plugin_controls`, not `add_plugin_activation`,
+and leaves out `PLUGIN_REQUIRE_ACTIVATION`, `Plugin::activation` and the activation bar. Its WebView page
+is told the bar never shows. A plugin with activation calls `add_plugin_activation` and includes
+`<activation/activation.h>`.
 
 ### What the plugin supplies to the editor
 
@@ -106,6 +117,8 @@ and the activation bar. With `add_plugin_editor`, the licensing module comes in 
 - Web colours: its stylesheet defines `--color-` `background`, `widget`, `line`, `fg`, `thumb`,
   `clip`, `header`, `title`, `activation`, `activation-outline`, `overlay-dim`, `overlay-panel`,
   `overlay-outline`, `input`, `input-outline`, `input-focus`, `input-highlight` and `scrollbar`.
+  Optional, falling back to those: `button-text`, `meter-background`, `menu`, `menu-header`,
+  `menu-highlight` and `menu-highlight-text`.
 - Web fonts: `fonts.ts` assumes Orbitron.
 - The manual: `ManualOverlay (markdown)` and `useManual(markdown)`.
 

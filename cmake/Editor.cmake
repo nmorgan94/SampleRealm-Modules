@@ -1,4 +1,4 @@
-# The editor module: the header, presets, overlays and the activation bar every plugin shares.
+# The editor module: the header, presets and overlays. The activation bar is add_plugin_activation's.
 #
 # Usage (from the top-level CMakeLists.txt, AFTER juce_add_plugin, with add_plugin_core):
 #     include(${SampleRealm-Modules_SOURCE_DIR}/cmake/Editor.cmake)
@@ -6,8 +6,7 @@
 
 include_guard(GLOBAL)
 
-# The activation bar is built on licensing, and the header's meter is in controls
-include(${CMAKE_CURRENT_LIST_DIR}/Licensing.cmake)
+# The header's meter is in controls
 include(${CMAKE_CURRENT_LIST_DIR}/Controls.cmake)
 
 cmake_path(GET CMAKE_CURRENT_LIST_DIR PARENT_PATH modulesRepoDir)
@@ -15,9 +14,6 @@ cmake_path(GET CMAKE_CURRENT_LIST_DIR PARENT_PATH modulesRepoDir)
 juce_add_module("${modulesRepoDir}/editor")
 
 function(add_plugin_editor pluginTarget)
-    # Does nothing for a plugin that called it already
-    add_licensing(${pluginTarget})
-
     add_plugin_controls(${pluginTarget})
 
     target_link_libraries(${pluginTarget} PRIVATE editor)

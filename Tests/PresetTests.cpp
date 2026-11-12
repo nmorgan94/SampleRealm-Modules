@@ -44,16 +44,6 @@ namespace
 
     struct PresetOverlayFixture : EditorFixtures::OverlayFixture, PresetFixture {};
 
-    juce::StringArray namesOf (const juce::Array<PresetManager::Preset>& list)
-    {
-        juce::StringArray names;
-
-        for (const auto& preset : list)
-            names.add (preset.name);
-
-        return names;
-    }
-
     const juce::StringArray factoryNames { "Boost +3", "Boost +6", "Cut -6", "Cut -12", "Cut -24" };
 }
 

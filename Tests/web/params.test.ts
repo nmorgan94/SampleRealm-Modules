@@ -11,8 +11,41 @@ const mute: ParamInfo = {
   id: 'mute', name: 'Mute', kind: 'toggle', min: 0, max: 1, defaultValue: 0, step: 1, skew: 1, unit: '', choices: [],
 };
 
+const voices: ParamInfo = {
+  id: 'voices', name: 'Voices', kind: 'integer', min: 1, max: 8, defaultValue: 1, step: 1, skew: 1, unit: '', choices: [],
+};
+
+const shape: ParamInfo = {
+  id: 'shape', name: 'Shape', kind: 'choice', min: 0, max: 2, defaultValue: 0, step: 1, skew: 1, unit: '', choices: ['Sine', 'Saw', 'Square'],
+};
+
+const rate: ParamInfo = {
+  id: 'rate', name: 'Rate', kind: 'choice', min: 0, max: 3, defaultValue: 0, step: 1, skew: 1, unit: '', choices: ['1/16', '1/8', '1/4', '1 Bar'],
+};
+
+test('a choice reads back its own names, in any case, before numbers', () => {
+  rate.choices.forEach((choice, index) => {
+    assert.equal(parseValue(rate, formatValue(rate, index)), index, choice);
+    assert.equal(parseValue(rate, choice.toUpperCase()), index, choice.toUpperCase());
+  });
+  assert.equal(parseValue(rate, ' 1/4 '), 2);
+  assert.equal(parseValue(shape, '2'), 2);
+  assert.equal(parseValue(shape, 'Triangle'), null);
+});
+
+test('integer and choice values round halves to even, as the plugin parameters do', () => {
+  assert.equal(fromProportion(voices, 0.5), 4);
+  assert.equal(snap(voices, 5.5), 6);
+  assert.equal(snap(voices, 5.4), 5);
+  assert.equal(snap(voices, 12), 8);
+  assert.equal(snap(shape, 0.5), 0);
+  assert.equal(snap(shape, 1.5), 2);
+  assert.equal(formatValue(shape, snap(shape, 1.5)), 'Square');
+});
+
 test('a toggle snaps to off or on, and reads as juce::AudioParameterBool does', () => {
   assert.equal(snap(mute, 0.7), 1);
+  assert.equal(snap(mute, 0.5), 1);
   assert.equal(snap(mute, 0.2), 0);
   assert.equal(formatValue(mute, 0), 'Off');
   assert.equal(formatValue(mute, 1), 'On');

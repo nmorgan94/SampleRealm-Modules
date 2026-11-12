@@ -57,6 +57,14 @@ namespace TestHelpers
         processor.processBlock (buffer, midi);
     }
 
+    // For a synth: the message arrives at the start of the block
+    inline void process (juce::AudioProcessor& processor, juce::AudioBuffer<float>& buffer, const juce::MidiMessage& message)
+    {
+        juce::MidiBuffer midi;
+        midi.addEvent (message, 0);
+        processor.processBlock (buffer, midi);
+    }
+
     inline bool allSamplesFinite (const juce::AudioBuffer<float>& buffer)
     {
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
@@ -65,6 +73,18 @@ namespace TestHelpers
                     return false;
 
         return true;
+    }
+
+    // A PresetManager's list, by name
+    template <typename Presets>
+    juce::StringArray namesOf (const Presets& presets)
+    {
+        juce::StringArray names;
+
+        for (const auto& preset : presets)
+            names.add (preset.name);
+
+        return names;
     }
 
     //==============================================================================

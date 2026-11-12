@@ -40,8 +40,15 @@ const layOut = (width: number, layout: HeaderLayout) => {
   };
 };
 
+// HeaderBar::Title: bold, then a part in the regular weight
+export interface HeaderTitle {
+  bold: string;
+  regular: string;
+}
+
 interface HeaderBarProps {
-  title: string;
+  // All bold as a string
+  title: string | HeaderTitle;
   width: number;
   layout: HeaderLayout;
   backend: { info: About; running: string; presets: PresetBackend };
@@ -54,6 +61,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
   const menu = useMenu();
   const boxes = layOut(width, layout);
   const actions = presetActions(backend.presets, prompt);
+  const { bold, regular } = typeof title === 'string' ? { bold: title, regular: '' } : title;
 
   const showMenu = async (button: HTMLElement) => {
     menu.open(button, [
@@ -71,7 +79,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
         className="absolute flex items-center font-bold whitespace-nowrap text-title"
         style={{ ...boxes.title, fontSize: juceHeight(layout.titleHeight) }}
       >
-        <FittedText text={title} width={layout.titleWidth} />
+        <FittedText text={bold} regular={regular} width={layout.titleWidth} />
       </h1>
       <PresetBar presets={backend.presets} actions={actions} bounds={boxes.presetBar} />
       <TextButton text="..." style={boxes.menu} onClick={(e) => void showMenu(e.currentTarget)} />

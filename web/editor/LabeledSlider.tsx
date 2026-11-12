@@ -1,15 +1,18 @@
 // Mirrors controls/LabeledSlider.h and how LookAndFeel_V4 draws it
 import { useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
-import type { EditorBackend } from '../backend.ts';
+import type { EditorBackend, ParamInfo } from '../backend.ts';
 import { juceHeight } from './fonts.ts';
 import { useParam } from './hooks.ts';
-import { layOutAboveLabel, type Rect } from './layout.ts';
+import { layOutAboveLabel, layOutBelowLabel, type Rect } from './layout.ts';
 import { formatValue, fromProportion, parseValue, toProportion } from './params.ts';
 
 // juce::Slider's defaults
 export const ROTARY_START = 1.2 * Math.PI;
 export const ROTARY_END = 2.8 * Math.PI;
 const PIXELS_FOR_FULL_DRAG = 250;
+
+// LabeledSlider::nameHeight
+const NAME_HEIGHT = 16;
 
 // Angles run clockwise from 12 o'clock, as in juce::Path::addCentredArc
 const pointAt =(cx: number, cy: number, radius: number, angle: number) =>
@@ -22,7 +25,7 @@ export const arcPath = (cx: number, cy: number, radius: number, from: number, to
 };
 
 // What a plugin's LookAndFeel::drawRotarySlider draws, in the slider's bounds
-export type RotaryProps = { width: number; height: number; proportion: number };
+export type RotaryProps = { width: number; height: number; proportion: number; value: number };
 export type Rotary = ComponentType<RotaryProps>;
 
 function RotaryGraphic({ width, height, proportion }: RotaryProps) {
@@ -52,9 +55,9 @@ type DragStart = { x: number; y: number; proportion: number };
 const NAME_DELAY_MS = 600;
 
 // LabeledSlider::styleLabel, as the props of the label's element
-export const styleLabel = (box: Rect) => ({
+export const styleLabel = (box: Rect, nameHeight = NAME_HEIGHT) => ({
   className: 'absolute flex items-center justify-center text-center font-bold leading-none',
-  style: { ...box, fontSize: juceHeight(16) },
+  style: { ...box, fontSize: juceHeight(nameHeight) },
 });
 
 interface LabeledSliderProps {
@@ -69,10 +72,31 @@ interface LabeledSliderProps {
   rotary?: Rotary;
   // As the LookAndFeel's drawLabel: a box behind the name, say. The typing box keeps its own
   labelClassName?: string;
+  // LabeledSlider::setNamePlacement: above, the knob takes all the room under the name
+  namePlacement?: 'below' | 'above';
+  // LabeledSlider::setNameHeight
+  nameHeight?: number;
+  // As Slider::setMouseDragSensitivity
+  pixelsForFullDrag?: number;
+  // As Slider::textFromValueFunction, in place of the value and its unit
+  valueText?: (param: ParamInfo, value: number) => string;
 }
 
-// A Slider::RotaryHorizontalVerticalDrag with its name below, which shows the value while it's being moved. Click the name to type a value.
-export function LabeledSlider({ backend, id, label, width, height, unit, rotary: Graphic = RotaryGraphic, labelClassName = '' }: LabeledSliderProps) {
+// A Slider::RotaryHorizontalVerticalDrag with its name below or above, which shows the value while it's being moved. Click the name to type a value.
+export function LabeledSlider({
+  backend,
+  id,
+  label,
+  width,
+  height,
+  unit,
+  rotary: Graphic = RotaryGraphic,
+  labelClassName = '',
+  namePlacement = 'below',
+  nameHeight,
+  pixelsForFullDrag = PIXELS_FOR_FULL_DRAG,
+  valueText,
+}: LabeledSliderProps) {
   const { value, set, commit, param } = useParam(backend, id);
   const drag = useRef<DragStart | null>(null);
   const nameTimer = useRef<number>();
@@ -80,10 +104,10 @@ export function LabeledSlider({ backend, id, label, width, height, unit, rotary:
   const [editing, setEditing] = useState(false);
   const proportion = toProportion(param, value);
   const suffix = unit ?? param.unit;
-  const text = suffix ? `${formatValue(param, value)} ${suffix}` : formatValue(param, value);
+  const text = valueText ? valueText(param, value) : suffix ? `${formatValue(param, value)} ${suffix}` : formatValue(param, value);
 
-  const layout = layOutAboveLabel(width, height);
-  const nameLabel = styleLabel(layout.label);
+  const layout = namePlacement === 'above' ? layOutBelowLabel(width, height) : layOutAboveLabel(width, height);
+  const nameLabel = styleLabel(layout.label, nameHeight);
 
   useEffect(() => () => clearTimeout(nameTimer.current), []);
 
@@ -138,7 +162,7 @@ export function LabeledSlider({ backend, id, label, width, height, unit, rotary:
           const start = drag.current;
           if (!start) return;
           const moved = e.clientX - start.x - (e.clientY - start.y);
-          const next = fromProportion(param, start.proportion + moved / PIXELS_FOR_FULL_DRAG);
+          const next = fromProportion(param, start.proportion + moved / pixelsForFullDrag);
           if (next !== value) set(next);
         }}
         onPointerUp={end}
@@ -146,7 +170,7 @@ export function LabeledSlider({ backend, id, label, width, height, unit, rotary:
         // As SliderAttachment's setDoubleClickReturnValue
         onDoubleClick={() => commit(param.defaultValue)}
       >
-        <Graphic width={layout.control.width} height={layout.control.height} proportion={proportion} />
+        <Graphic width={layout.control.width} height={layout.control.height} proportion={proportion} value={value} />
       </div>
       {editing ? (
         <input

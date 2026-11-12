@@ -5,8 +5,8 @@
   vendor:             SampleRealm
   version:            1.0.0
   name:               Editor
-  description:        The header, presets, overlays and the activation bar, on top of the controls module.
-  dependencies:       juce_audio_processors, juce_gui_basics, licensing, controls
+  description:        The header, presets and overlays, on top of the controls module.
+  dependencies:       juce_audio_processors, juce_gui_basics, controls
   minimumCppStandard: 20
 
  END_JUCE_MODULE_DECLARATION
@@ -24,7 +24,6 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <licensing/licensing.h>
 #include <controls/controls.h>
 
 #include "EditorFonts.h"
@@ -37,5 +36,3 @@
 #include "PresetBar.h"
 #include "HeaderBar.h"
 #include "About.h"
-#include "ActivationActions.h"
-#include "ActivationBar.h"

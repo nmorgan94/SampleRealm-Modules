@@ -29,8 +29,7 @@ public:
 
         const auto position = static_cast<size_t> (index);
         const auto& spec = *specs[position];
-        const auto inRange = std::clamp (value, spec.min, spec.max);
-        values[position] = spec.kind == ParameterSpecs::Kind::real ? inRange : std::round (inRange);
+        values[position] = snapped (spec, std::clamp (value, spec.min, spec.max));
     }
 
     float operator() (const ParameterSpecs::Spec& spec) const
@@ -40,6 +39,20 @@ public:
     }
 
 private:
+    static float snapped (const ParameterSpecs::Spec& spec, float inRange)
+    {
+        switch (spec.kind)
+        {
+            case ParameterSpecs::Kind::real:    return inRange;
+            case ParameterSpecs::Kind::toggle:  return inRange >= 0.5f ? 1.0f : 0.0f;
+            case ParameterSpecs::Kind::integer:
+            case ParameterSpecs::Kind::choice:  break;
+        }
+
+        // As juce::roundToInt, which these parameters snap with: halves go to the even number
+        return std::nearbyint (inRange);
+    }
+
     std::array<const ParameterSpecs::Spec*, Count> specs;
     std::array<float, Count> values;
 };

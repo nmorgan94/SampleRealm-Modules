@@ -13,8 +13,15 @@ export const toProportion = (param: ParamInfo, value: number) => {
   return param.skew === 1 ? p : Math.pow(p, param.skew);
 };
 
+// As juce::roundToInt, which integer and choice parameters snap with: halves go to the even number
+const roundHalfEven = (value: number) => {
+  const rounded = Math.round(value);
+  return Math.abs(value % 1) === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;
+};
+
 export const snap = (param: ParamInfo, value: number) => {
   const clamped = Math.min(param.max, Math.max(param.min, value));
+  if (param.kind === 'integer' || param.kind === 'choice') return roundHalfEven(clamped);
   if (param.step <= 0) return clamped;
   const snapped = param.min + Math.round((clamped - param.min) / param.step) * param.step;
   // Avoids 0.7000000000000001
@@ -43,7 +50,12 @@ export const formatValue = (param: ParamInfo, value: number) => {
   return value.toFixed(decimalPlaces(param.step));
 };
 
+// A choice's name, in any case, before a number: '1/4' is a name, not 1
 export const parseValue = (param: ParamInfo, text: string): number | null => {
+  const typed = text.trim().toLowerCase();
+  const choiceIndex = param.choices.findIndex((choice) => choice.toLowerCase() === typed);
+  if (choiceIndex >= 0) return choiceIndex;
+
   const number = parseFloat(text);
   if (Number.isNaN(number)) return null;
   return snap(param, number);

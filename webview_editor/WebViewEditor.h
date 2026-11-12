@@ -20,8 +20,10 @@ public:
         PresetManager* presets = nullptr;
         PeakMeter* meter = nullptr;
 
+       #if JUCE_MODULE_AVAILABLE_activation
         // Null in a build that doesn't require activation
         licensing::Activation* activation = nullptr;
+       #endif
 
         int width;
         int height;
@@ -44,15 +46,19 @@ private:
 
     juce::WebBrowserComponent::Options createOptions();
     juce::WebBrowserComponent::Options withPresetFunctions (const juce::WebBrowserComponent::Options&);
-    juce::WebBrowserComponent::Options withActivationFunctions (const juce::WebBrowserComponent::Options&);
     juce::var activationStatus() const;
     std::optional<juce::WebBrowserComponent::Resource> getResource (const juce::String& url);
 
     Plugin plugin;
 
+   #if JUCE_MODULE_AVAILABLE_activation
+    juce::WebBrowserComponent::Options withActivationFunctions (const juce::WebBrowserComponent::Options&);
+    void checkActivation();
+
     std::unique_ptr<ActivationActions> activation;
     bool activationBarShowing = false;
     int ticksSinceActivationCheck = 0;
+   #endif
 
     // Declaration order matters: relays, browser, attachments
     std::vector<std::unique_ptr<juce::WebSliderRelay>> relays;

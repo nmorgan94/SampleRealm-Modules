@@ -81,3 +81,45 @@ TEST_CASE ("A labelled control's label goes right under a square control, the pa
     check (100, 101, { 11, 0, 77, 77 }, { 0, 77, 100, 24 });
     check (50, 21, { 25, -1, 0, 0 }, { 0, -1, 50, 24 });
 }
+
+TEST_CASE ("A labelled slider's name can go above, with the knob taking the room under it", "[editor]")
+{
+    // The same case as Tests/web/layout.test.ts
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+
+    LabeledSlider control;
+    control.setLabelText ("CUTOFF");
+    control.setSize (74, 115);
+
+    const auto labels = descendantsOf<juce::Label> (control);
+    REQUIRE (labels.size() == 1);
+    auto& label = *labels.front();
+
+    CHECK (control.getSlider().getBounds() == juce::Rectangle<int> (0, 8, 74, 74));
+    CHECK_THAT (label.getFont().getHeight(), WithinAbs (LabeledSlider::nameHeight, 1.0e-4));
+
+    control.setNamePlacement (LabeledSlider::NamePlacement::above);
+    control.setNameHeight (14.0f);
+
+    CHECK (label.getBounds() == juce::Rectangle<int> (0, 0, 74, 24));
+    CHECK (control.getSlider().getBounds() == juce::Rectangle<int> (0, 24, 74, 91));
+    CHECK_THAT (label.getFont().getHeight(), WithinAbs (14.0, 1.0e-4));
+    CHECK (label.getFont().isBold());
+}
+
+TEST_CASE ("A labelled slider shows the slider's own text for a value", "[editor]")
+{
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+
+    LabeledSlider control;
+    auto& slider = control.getSlider();
+    slider.setRange (0.0, 2.0, 1.0);
+    slider.textFromValueFunction = [] (double value) { return juce::StringArray { "SQUARE", "SAW", "TRI" }[juce::roundToInt (value)]; };
+    control.setLabelText ("OSC A");
+
+    auto& label = *descendantsOf<juce::Label> (control).front();
+
+    juce::Slider::ScopedDragNotification drag (slider);
+    slider.setValue (2.0, juce::sendNotificationSync);
+    CHECK (label.getText() == "TRI");
+}

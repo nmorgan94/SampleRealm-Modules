@@ -16,6 +16,10 @@ const ITEM_HEIGHT = 17;
 const SEPARATOR_HEIGHT = 10;
 const BORDER = 2;
 
+// A plugin's stylesheet may give the menu colours of its own: --color-menu, -menu-header, -menu-highlight and -menu-highlight-text
+const HIGHLIGHTED = 'bg-[color:var(--color-menu-highlight,var(--color-thumb))] text-[color:var(--color-menu-highlight-text,var(--color-fg))]';
+const HOVERED = 'hover:bg-[color:var(--color-menu-highlight,var(--color-thumb))] hover:text-[color:var(--color-menu-highlight-text,var(--color-fg))]';
+
 // Where a list goes, and where it goes instead when there's no room to the right
 type Placement = { left: number; top: number; leftIfNoRoom: number };
 
@@ -67,7 +71,12 @@ function MenuList({ items, placement, onClose }: { items: MenuItem[]; placement:
 
   return (
     <>
-      <div ref={list} role="menu" className="absolute z-41 border border-fg/60 bg-background whitespace-nowrap text-fg shadow-lg" style={style}>
+      <div
+        ref={list}
+        role="menu"
+        className="absolute z-41 border border-fg/60 bg-[color:var(--color-menu,var(--color-background))] whitespace-nowrap text-fg shadow-lg"
+        style={style}
+      >
         {items.map((item, index) => {
           if (item.kind === 'separator') {
             return (
@@ -79,7 +88,7 @@ function MenuList({ items, placement, onClose }: { items: MenuItem[]; placement:
 
           if (item.kind === 'header') {
             return (
-              <div key={index} className="flex items-center pr-4 pl-3 font-bold" style={{ height: ITEM_HEIGHT }}>
+              <div key={index} className="flex items-center pr-4 pl-3 font-bold text-[color:var(--color-menu-header,var(--color-fg))]" style={{ height: ITEM_HEIGHT }}>
                 {item.label}
               </div>
             );
@@ -95,7 +104,7 @@ function MenuList({ items, placement, onClose }: { items: MenuItem[]; placement:
               role="menuitem"
               aria-disabled={disabled}
               aria-haspopup={item.kind === 'submenu'}
-              className={`relative mx-px flex items-center rounded-sm pr-5 ${disabled ? 'text-fg/30' : 'cursor-pointer hover:bg-thumb'} ${highlighted ? 'bg-thumb' : ''}`}
+              className={`relative mx-px flex items-center rounded-sm pr-5 ${disabled ? 'text-fg/30' : `cursor-pointer ${HOVERED}`} ${highlighted ? HIGHLIGHTED : ''}`}
               style={{ height: ITEM_HEIGHT, paddingLeft: ITEM_HEIGHT }}
               onPointerEnter={(e) => {
                 if (e.pointerType !== 'touch') setOpen(item.kind === 'submenu' ? index : null);

@@ -90,11 +90,13 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
     if (plugin.presets != nullptr)
         lastPresetChange = plugin.presets->getChangeCounter();
 
+   #if JUCE_MODULE_AVAILABLE_activation
     if (plugin.activation != nullptr)
     {
         activation = std::make_unique<ActivationActions> (*plugin.activation);
         activationBarShowing = activation->needsActivation();
     }
+   #endif
 
     browser = std::make_unique<SinglePageBrowser> (createOptions());
     hideMacWebViewBackground (*browser);
@@ -135,7 +137,13 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
     for (auto& relay : relays)
         options = options.withOptionsFrom (*relay);
 
-    return withActivationFunctions (withPresetFunctions (options))
+    options = withPresetFunctions (options);
+
+   #if JUCE_MODULE_AVAILABLE_activation
+    options = withActivationFunctions (options);
+   #endif
+
+    return options
         .withInitialisationData ("uiInfo", juce::String (uiInfoJson (plugin.specs, JucePlugin_VersionString, buildCommit)))
         .withInitialisationData ("activationStatus", juce::JSON::toString (activationStatus(), true))
         .withInitialisationData ("running", About::running (processor));
@@ -224,14 +232,28 @@ juce::WebBrowserComponent::Options WebViewEditor::withPresetFunctions (const juc
         });
 }
 
+// The page reads this in every plugin: never shown in one without the activation module
 juce::var WebViewEditor::activationStatus() const
 {
+    auto show = false;
+    juce::String machine;
+
+   #if JUCE_MODULE_AVAILABLE_activation
+    if (activation != nullptr)
+    {
+        show = activation->needsActivation();
+        machine = activation->machineCode();
+    }
+   #endif
+
     auto status = std::make_unique<juce::DynamicObject>();
-    status->setProperty ("show", activation != nullptr && activation->needsActivation());
-    status->setProperty ("machine", activation != nullptr ? activation->machineCode() : juce::String());
+    status->setProperty ("show", show);
+    status->setProperty ("machine", machine);
+
     return juce::var (status.release());
 }
 
+#if JUCE_MODULE_AVAILABLE_activation
 juce::WebBrowserComponent::Options WebViewEditor::withActivationFunctions (const juce::WebBrowserComponent::Options& options)
 {
     using Args = juce::Array<juce::var>;
@@ -260,6 +282,23 @@ juce::WebBrowserComponent::Options WebViewEditor::withActivationFunctions (const
             activation->importFile ([completeImport = std::move (complete)] (const juce::String& message) { completeImport (message); });
         });
 }
+
+// Once a second, in case another instance activated this plugin
+void WebViewEditor::checkActivation()
+{
+    if (! activationBarShowing || ++ticksSinceActivationCheck < updateHz || ! browser->isShowing())
+        return;
+
+    ticksSinceActivationCheck = 0;
+    activation->refresh();
+
+    if (! activation->needsActivation())
+    {
+        activationBarShowing = false;
+        browser->emitEventIfBrowserIsVisible ("activationStatus", activationStatus());
+    }
+}
+#endif
 
 std::optional<juce::WebBrowserComponent::Resource> WebViewEditor::getResource (const juce::String& url)
 {
@@ -305,18 +344,9 @@ void WebViewEditor::timerCallback()
             browser->emitEventIfBrowserIsVisible (name, payload);
         });
 
-    // Once a second, in case another instance activated this plugin
-    if (activationBarShowing && ++ticksSinceActivationCheck >= updateHz && browser->isShowing())
-    {
-        ticksSinceActivationCheck = 0;
-        activation->refresh();
-
-        if (! activation->needsActivation())
-        {
-            activationBarShowing = false;
-            browser->emitEventIfBrowserIsVisible ("activationStatus", activationStatus());
-        }
-    }
+   #if JUCE_MODULE_AVAILABLE_activation
+    checkActivation();
+   #endif
 }
 
 void WebViewEditor::paint (juce::Graphics& g)

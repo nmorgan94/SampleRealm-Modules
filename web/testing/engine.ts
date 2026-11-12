@@ -6,13 +6,14 @@ import { instantiateEngine, readUiInfo } from '../demo/engine.ts';
 export const sampleRate = 48000;
 export const blockSize = 128;
 
-// Returns a function that makes a fresh engine, prepared for that many channels
+// Returns a function that makes a fresh engine, prepared for that many channels at `rate`.
+// A null rate leaves it unprepared, as the worklet's engine before its first prepare
 export function engineAt(wasmPath: string) {
   const wasm = new WebAssembly.Module(readFileSync(wasmPath));
 
-  return (numChannels = 2) => {
+  return (numChannels = 2, rate: number | null = sampleRate) => {
     const engine = instantiateEngine(wasm);
-    engine.prepare(sampleRate, numChannels);
+    if (rate !== null) engine.prepare(rate, numChannels);
 
     const info = readUiInfo(engine);
     const ids = info.params.map((param) => param.id);
@@ -52,5 +53,11 @@ export function engineAt(wasmPath: string) {
 export const sine = (seconds: number, amplitude: number, frequency = 440, rate = sampleRate) =>
   Float32Array.from({ length: Math.round(seconds * rate) }, (_, sample) => amplitude * Math.sin((2 * Math.PI * frequency * sample) / rate));
 
-export const maxError = (actual: ArrayLike<number>, expected: ArrayLike<number>) =>
+export const rms = (signal: ArrayLike<number>, from = 0, to = signal.length) => {
+  let sum = 0;
+  for (let sample = from; sample < to; sample++) sum += signal[sample]! ** 2;
+  return Math.sqrt(sum / (to - from));
+};
+
+export const maxError =(actual: ArrayLike<number>, expected: ArrayLike<number>) =>
   Array.from(actual).reduce((worst, sample, index) => Math.max(worst, Math.abs(sample - expected[index]!)), 0);

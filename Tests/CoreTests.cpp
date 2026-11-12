@@ -119,6 +119,16 @@ TEST_CASE ("Parameter values start at their defaults and are set by the host's o
     values.set (2, 7.0f);
     CHECK_THAT (values (Specs::shape), WithinAbs (2.0, 0.0));
 
+    // Halves go to the even number, as juce::roundToInt
+    values.set (1, 4.5f);
+    CHECK_THAT (values (Specs::voices), WithinAbs (4.0, 0.0));
+    values.set (1, 5.5f);
+    CHECK_THAT (values (Specs::voices), WithinAbs (6.0, 0.0));
+    values.set (2, 0.5f);
+    CHECK_THAT (values (Specs::shape), WithinAbs (0.0, 0.0));
+    values.set (2, 1.5f);
+    CHECK_THAT (values (Specs::shape), WithinAbs (2.0, 0.0));
+
     // A spec that isn't in the list reads as its default
     constexpr ParameterSpecs::Spec other { "other", "Other", ParameterSpecs::Kind::real, 0.0f, 1.0f, 0.5f };
     CHECK_THAT (values (other), WithinAbs (0.5, 0.0));

@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "EditorFixtures.h"
 #include "StubPlugin.h"
 
 using Catch::Matchers::WithinAbs;
@@ -70,4 +71,33 @@ TEST_CASE ("The layout has a parameter of the right kind for each spec, in order
     CHECK (levelParameter->isAutomatable());
     CHECK (voicesParameter->isAutomatable());
     CHECK (shapeParameter->isAutomatable());
+}
+
+TEST_CASE ("A choice reads its names in any case, then numbers, from the host and from its knob", "[parameters]")
+{
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    StubPlugin::SilentProcessor host;
+    juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (specs, 1) };
+    auto& shapeParameter = *apvts.getParameter ("shape");
+
+    CHECK_THAT (shapeParameter.getValueForText (" square "), WithinAbs (1.0, 1.0e-6));
+    CHECK_THAT (shapeParameter.getValueForText ("SINE"), WithinAbs (0.0, 1.0e-6));
+    CHECK_THAT (shapeParameter.getValueForText ("1"), WithinAbs (0.5, 1.0e-6));
+
+    LabeledSlider control;
+    juce::AudioProcessorValueTreeState::SliderAttachment attachment { apvts, "shape", control.getSlider() };
+    control.getSlider().textFromValueFunction = [] (double value) { return juce::StringArray { "SINE", "SAW", "SQUARE" }[juce::roundToInt (value)]; };
+    auto& label = *EditorFixtures::descendantsOf<juce::Label> (control).front();
+
+    // As if typed: the label's editor needs it on screen
+    label.setText ("Sine", juce::sendNotificationSync);
+    CHECK_THAT (shapeParameter.getValue(), WithinAbs (0.0, 1.0e-6));
+
+    label.setText ("square", juce::sendNotificationSync);
+    CHECK_THAT (shapeParameter.getValue(), WithinAbs (1.0, 1.0e-6));
+    CHECK (label.getText() == "SQUARE");
+
+    // Read as 0, which isn't its own name
+    label.setText ("nothing", juce::sendNotificationSync);
+    CHECK_THAT (shapeParameter.getValue(), WithinAbs (1.0, 1.0e-6));
 }

@@ -1,7 +1,14 @@
-// The same cases as the layOutAboveLabel test in Tests/LabeledSliderTests.cpp
+// The same cases as the layout tests in Tests/LabeledSliderTests.cpp
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { layOutAboveLabel } from '../../web/editor/layout.ts';
+import { layOutAboveLabel, layOutBelowLabel } from '../../web/editor/layout.ts';
+
+test('a label above has the control taking the room under it', () => {
+  assert.deepEqual(layOutBelowLabel(74, 115), {
+    control: { left: 0, top: 24, width: 74, height: 91 },
+    label: { left: 0, top: 0, width: 74, height: 24 },
+  });
+});
 
 test('the label goes right under a square control, the pair centred', () => {
   assert.deepEqual(layOutAboveLabel(140, 190), {

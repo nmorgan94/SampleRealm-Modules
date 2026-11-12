@@ -4,8 +4,9 @@ import { juceHeight } from './fonts.ts';
 
 const MIN_SQUEEZE = 0.7;
 
-// As drawFittedText on one line: squeezed to fit, as far as 70% wide, then cut short with "…"
-export function FittedText({ text, width }: { text: string; width: number }) {
+// As drawFittedText on one line: squeezed to fit, as far as 70% wide, then cut short with "…".
+// `regular` follows the text in the regular weight
+export function FittedText({ text, regular = '', width }: { text: string; regular?: string; width: number }) {
   const span = useRef<HTMLSpanElement>(null);
   const [squeeze, setSqueeze] = useState(1);
 
@@ -16,15 +17,16 @@ export function FittedText({ text, width }: { text: string; width: number }) {
     };
     measure();
     document.fonts?.ready.then(measure);
-  }, [text, width]);
+  }, [text, regular, width]);
 
   return (
     <span
       ref={span}
-      className="inline-block shrink-0 origin-left overflow-hidden text-ellipsis whitespace-nowrap"
+      className="inline-block shrink-0 origin-left overflow-hidden text-ellipsis whitespace-pre"
       style={{ maxWidth: width / squeeze, transform: `scaleX(${squeeze})` }}
     >
       {text}
+      {regular && <span className="font-normal">{regular}</span>}
     </span>
   );
 }
@@ -40,7 +42,7 @@ export function TextButton({ text, style, onClick }: TextButtonProps) {
   return (
     <button
       type="button"
-      className="absolute cursor-pointer overflow-hidden rounded-md border border-line bg-widget px-1 text-ellipsis whitespace-nowrap text-fg hover:bg-[color-mix(in_srgb,var(--color-widget),white_5%)] active:bg-[color-mix(in_srgb,var(--color-widget),white_20%)]"
+      className="absolute cursor-pointer overflow-hidden rounded-md border border-line bg-widget px-1 text-ellipsis whitespace-nowrap text-[color:var(--color-button-text,var(--color-fg))] hover:bg-[color-mix(in_srgb,var(--color-widget),white_5%)] active:bg-[color-mix(in_srgb,var(--color-widget),white_20%)]"
       style={{ fontSize: juceHeight(12), ...style }}
       onClick={onClick}
     >

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ActivationActions.h"
-#include "PromptOverlay.h"
 
 //==============================================================================
 /**

@@ -30,7 +30,7 @@ interface PresetState {
   values: Record<string, number>;
 }
 
-const parseState = (xml: string): PresetState => ({
+export const parseState = (xml: string): PresetState => ({
   values: Object.fromEntries(xmlTags(xml, 'PARAM').map(({ id, value }) => [id, value ? Number(value) : NaN])),
 });
 

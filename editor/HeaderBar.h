@@ -30,16 +30,38 @@ public:
         int meterInset;     // above and below the meter
     };
 
+    /** Bold, then a part in the regular weight, which may be empty. As HeaderTitle in web/editor/HeaderBar.tsx. */
+    struct Title
+    {
+        juce::String bold, regular;
+    };
+
     static constexpr float minimumTitleScale = 0.7f;
     juce::Font titleFont() const;
 
-    HeaderBar (const juce::String& title, const Layout&, PresetManager&, PromptOverlay&,
+    /** Both parts, before any squeezing. */
+    float titleTextWidth() const;
+
+    /** As drawFittedText: squeezed to fit, as far as minimumTitleScale, then cut short with "…". */
+    struct FittedTitle
+    {
+        Title shown;
+        float squeeze;
+    };
+
+    static FittedTitle fitTitle (const Title&, const juce::Font& boldFont, const juce::Font& regularFont, int width);
+
+    HeaderBar (const Title&, const Layout&, PresetManager&, PromptOverlay&,
+               std::function<void()> showManual, const juce::String& aboutText, juce::Component& meter);
+
+    HeaderBar (const juce::String& boldTitle, const Layout&, PresetManager&, PromptOverlay&,
                std::function<void()> showManual, const juce::String& aboutText, juce::Component& meter);
 
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
+    const Title title;
     const Layout layout;
     PromptOverlay& prompt;
     const std::function<void()> showManual;
@@ -50,6 +72,8 @@ private:
     juce::TextButton menuButton { "..." };
     juce::Component& meter;
 
+    juce::Font regularTitleFont() const;
+    static float widthOf (const Title&, const juce::Font& boldFont, const juce::Font& regularFont);
     void showMenu();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HeaderBar)

@@ -6,5 +6,3 @@
 #include "PresetBar.cpp"
 #include "HeaderBar.cpp"
 #include "About.cpp"
-#include "ActivationActions.cpp"
-#include "ActivationBar.cpp"

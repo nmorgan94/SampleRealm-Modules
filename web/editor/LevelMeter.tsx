@@ -4,7 +4,8 @@ import type { PluginBackend } from '../backend.ts';
 import { centred } from './layout.ts';
 import { barChanged, emptyBar, FLOOR_DB, isClipping, updateBar, UPDATE_HZ, type Bar } from './meter.ts';
 
-const BAR_WIDTH = 12;
+// LevelMeter::barWidth
+export const BAR_WIDTH = 12;
 const GAP = 3;
 const MAX_CHANNELS = 2;
 
@@ -13,10 +14,10 @@ export const PREFERRED_WIDTH = widthFor(MAX_CHANNELS);
 
 type LevelSource = Pick<PluginBackend, 'onLevel'>;
 
-function useBars(backend: LevelSource) {
-  const [bars, setBars] = useState<Bar[]>(() => Array.from({ length: MAX_CHANNELS }, emptyBar));
+function useBars(backend: LevelSource, channels: number) {
+  const [bars, setBars] = useState<Bar[]>(() => Array.from({ length: channels }, emptyBar));
   // The loudest peak per channel since the last tick
-  const pending = useRef<number[]>(new Array(MAX_CHANNELS).fill(0));
+  const pending = useRef<number[]>(new Array(channels).fill(0));
 
   useEffect(
     () =>
@@ -54,15 +55,25 @@ function BarView({ x, height, bar }: { x: number; height: number; bar: Bar }) {
   return (
     <g>
       <rect x={left} y={0.5} width={width} height={6} rx={2} fill={isClipping(bar) ? 'var(--color-clip)' : 'var(--color-line)'} />
-      <rect x={left} y={top} width={width} height={bodyHeight} rx={2} fill="var(--color-background)" />
+      <rect x={left} y={top} width={width} height={bodyHeight} rx={2} fill="var(--color-meter-background, var(--color-background))" />
       {fillHeight > 0 && <rect x={left + 1} y={top + 1 + bodyHeight - 2 - fillHeight} width={width - 2} height={fillHeight} rx={1.5} fill="var(--color-thumb)" />}
       <rect x={left} y={top} width={width} height={bodyHeight} rx={2} fill="none" stroke="var(--color-line)" strokeWidth={1} />
     </g>
   );
 }
 
-export function LevelMeter({ backend, x, y, width, height }: { backend: LevelSource; x: number; y: number; width: number; height: number }) {
-  const bars = useBars(backend);
+interface LevelMeterProps {
+  backend: LevelSource;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  // Bars shown until the first level arrives
+  channels?: number;
+}
+
+export function LevelMeter({ backend, x, y, width, height, channels = MAX_CHANNELS }: LevelMeterProps) {
+  const bars = useBars(backend, channels);
   const start = centred(width, widthFor(bars.length));
 
   return (

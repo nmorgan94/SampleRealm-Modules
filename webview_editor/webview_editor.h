@@ -17,4 +17,9 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <editor/editor.h>
 
+// Only a plugin with add_plugin_activation has it
+#if JUCE_MODULE_AVAILABLE_activation
+ #include <activation/activation.h>
+#endif
+
 #include "WebViewEditor.h"

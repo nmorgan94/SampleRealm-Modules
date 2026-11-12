@@ -20,8 +20,13 @@ struct Transport
         if (const auto position = playHead->getPosition())
         {
             transport.bpm = position->getBpm().orFallback (transport.bpm);
-            transport.playing = position->getIsPlaying();
-            transport.ppq = position->getPpqPosition().orFallback (transport.ppq);
+
+            // Playing with no position counts as stopped
+            if (const auto ppq = position->getPpqPosition())
+            {
+                transport.playing = position->getIsPlaying();
+                transport.ppq = *ppq;
+            }
         }
 
         return transport;

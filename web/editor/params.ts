@@ -1,11 +1,15 @@
 import type { ParamInfo } from '../backend.ts';
 
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+// NaN gives 0
+export const clamp01 = (value: number) => (value >= 1 ? 1 : value > 0 ? value : 0);
 
-export const fromProportion = (param: ParamInfo, proportion: number) => {
+// As a JUCE slider moves: snapped to the step
+export const fromProportion = (param: ParamInfo, proportion: number) => snap(param, rangeFromProportion(param, proportion));
+
+// NormalisableRange::convertFrom0to1, which doesn't snap
+export const rangeFromProportion = (param: ParamInfo, proportion: number) => {
   const p = clamp01(proportion);
-  const value = param.min + (param.max - param.min) * (param.skew === 1 ? p : Math.pow(p, 1 / param.skew));
-  return snap(param, value);
+  return param.min + (param.max - param.min) * (param.skew === 1 ? p : Math.pow(p, 1 / param.skew));
 };
 
 export const toProportion = (param: ParamInfo, value: number) => {
@@ -28,6 +32,7 @@ export const snap = (param: ParamInfo, value: number) => {
   return Math.min(param.max, Number(snapped.toFixed(decimalPlaces(param.step))));
 };
 
+// As AudioParameterFloat counts them from its step
 const decimalPlaces = (step: number) => {
   if (step <= 0) return 7;
   if (Number.isInteger(step)) return 0;

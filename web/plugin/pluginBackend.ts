@@ -70,6 +70,9 @@ function pluginPresets(initial: PresetStatus): PresetBackend {
 
 const initialisationData = () => window.__JUCE__.initialisationData as unknown as InitialisationData;
 
+// A plugin's own initialisation data from Plugin::withOptions. JUCE wraps each item in an array
+export const initialData = <Data>(name: string) => (window.__JUCE__.initialisationData as unknown as Record<string, Data[]>)[name]![0]!;
+
 // What WebViewEditor emits, a plugin's own events from Plugin::onTick included. Returns how to stop listening
 export const onEvent = <Payload>(name: string, listener: (payload: Payload) => void) => {
   const handle = window.__JUCE__.backend.addEventListener(name, (payload) => listener(payload as Payload));

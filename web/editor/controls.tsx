@@ -6,7 +6,7 @@ const MIN_SQUEEZE = 0.7;
 
 // As drawFittedText on one line: squeezed to fit, as far as 70% wide, then cut short with "…".
 // `regular` follows the text in the regular weight
-export function FittedText({ text, regular = '', width }: { text: string; regular?: string; width: number }) {
+export function FittedText({ text, regular = '', width, centred = false }: { text: string; regular?: string; width: number; centred?: boolean }) {
   const span = useRef<HTMLSpanElement>(null);
   const [squeeze, setSqueeze] = useState(1);
 
@@ -22,7 +22,7 @@ export function FittedText({ text, regular = '', width }: { text: string; regula
   return (
     <span
       ref={span}
-      className="inline-block shrink-0 origin-left overflow-hidden text-ellipsis whitespace-pre"
+      className={`inline-block shrink-0 ${centred ? 'origin-center' : 'origin-left'} overflow-hidden text-ellipsis whitespace-pre`}
       style={{ maxWidth: width / squeeze, transform: `scaleX(${squeeze})` }}
     >
       {text}

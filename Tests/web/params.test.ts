@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ParamInfo } from '../../web/backend.ts';
-import { formatValue, fromProportion, parseValue, snap, toProportion } from '../../web/editor/params.ts';
+import { clamp01, formatValue, fromProportion, parseValue, rangeFromProportion, snap, toProportion } from '../../web/editor/params.ts';
 
 const gain: ParamInfo = {
   id: 'gain', name: 'Gain', kind: 'real', min: -60, max: 6, defaultValue: 0, step: 0.1, skew: 1, unit: 'dB', choices: [],
@@ -59,6 +59,21 @@ test('knob positions map to values and back', () => {
 test('positions past either end clamp to the range', () => {
   assert.equal(fromProportion(gain, 1.5), 6);
   assert.equal(fromProportion(gain, -0.5), -60);
+  assert.equal(clamp01(-0.2), 0);
+  assert.equal(clamp01(1.2), 1);
+  assert.equal(clamp01(NaN), 0);
+});
+
+test('a position maps to the range unsnapped, or snapped to the step as a knob moves', () => {
+  const skewed = { ...gain, skew: 0.5 };
+  assert.ok(Math.abs(rangeFromProportion(gain, 0.13) - -51.42) < 1e-9);
+  assert.ok(Math.abs(rangeFromProportion(skewed, 0.5) - -43.5) < 1e-9);
+  assert.equal(fromProportion(skewed, 0.5), -43.5);
+  assert.equal(rangeFromProportion(skewed, 0), -60);
+});
+
+test('a step gives the decimal places of its text', () => {
+  assert.deepEqual([0.001, 0.1, 0.01, 1].map((step) => formatValue({ ...gain, step }, 1)), ['1.000', '1.0', '1.00', '1']);
 });
 
 test('typed text parses with its unit, and text without a number is ignored', () => {

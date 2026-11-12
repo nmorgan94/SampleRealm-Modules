@@ -201,6 +201,17 @@ TEST_CASE ("The transport takes the host's tempo and position, or defaults", "[c
     CHECK (Transport::from (&host) == Transport {});
 }
 
+TEST_CASE ("A host playing with no position counts as stopped", "[core][transport]")
+{
+    FakePlayHead host;
+    juce::AudioPlayHead::PositionInfo position;
+    position.setBpm (90.0);
+    position.setIsPlaying (true);
+    host.position = position;
+
+    CHECK (Transport::from (&host) == Transport { 90.0, false, 0.0 });
+}
+
 TEST_CASE ("The transport moves on only while playing", "[core][transport]")
 {
     Transport transport { 120.0, true, 4.0 };

@@ -34,6 +34,9 @@ public:
 
         // Called updateHz times a second while the page is showing, for the plugin's own events
         std::function<void (const EmitEvent&)> onTick = nullptr;
+
+        // Adds the plugin's own native functions and initialisation data
+        std::function<juce::WebBrowserComponent::Options (juce::WebBrowserComponent::Options)> withOptions = nullptr;
     };
 
     WebViewEditor (juce::AudioProcessor&, const Plugin&);

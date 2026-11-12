@@ -143,6 +143,9 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
     options = withActivationFunctions (options);
    #endif
 
+    if (plugin.withOptions != nullptr)
+        options = plugin.withOptions (std::move (options));
+
     return options
         .withInitialisationData ("uiInfo", juce::String (uiInfoJson (plugin.specs, JucePlugin_VersionString, buildCommit)))
         .withInitialisationData ("activationStatus", juce::JSON::toString (activationStatus(), true))

@@ -90,6 +90,7 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `DemoFrame` takes an `overlay`, shown over the editor without being scaled with it.
 - `LabeledSlider::labelHeight`, and `LABEL_HEIGHT` in `layout.ts`, are the height it adds under the knob.
 - `Plugin::onTick` sends the plugin's own events to the page, and `Plugin::background` is its colour.
+  `Plugin::withOptions` adds the plugin's own native functions and initialisation data.
 - `LabeledSlider.tsx` takes the plugin's `rotary` drawing, a `unit`, and a `labelClassName` for
   what its LookAndFeel's `drawLabel` adds, such as a box behind the name.
 - The name goes above with `setNamePlacement` / `namePlacement="above"`, sized by `setNameHeight` / `nameHeight`.
@@ -100,7 +101,8 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `LevelMeter.tsx` takes `channels`, the bars shown before the first level.
 - `TestHelpers::process (processor, buffer, message)` plays one MIDI message at the start of the block, for a synth.
 - A `toggle (...)` spec is an `AudioParameterBool`; `notAutomatable (...)` around any spec keeps hosts from automating it.
-- `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits.
+- `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits, and
+  `initialData (name)` reads what `Plugin::withOptions` adds.
 
 ### A plugin without activation
 

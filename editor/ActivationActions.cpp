@@ -11,7 +11,7 @@ static juce::String messageFor (licensing::LicenceStatus offered)
         case LicenceStatus::malformed:       return "That isn't a licence. Copy it from the website again.";
         case LicenceStatus::signature:
         case LicenceStatus::payload:         return "That licence isn't one this plugin accepts.";
-        case LicenceStatus::wrongMachine:    return "That licence is for another computer. Activate again from this one.";
+        case LicenceStatus::wrongMachine:    return "That licence isn't for this plugin on this computer. Activate again from here.";
         case LicenceStatus::noLicenceFile:   return "The licence couldn't be saved.";
         case LicenceStatus::noMachineCode:   return "This computer gave no ID to activate with.";
     }

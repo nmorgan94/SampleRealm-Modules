@@ -32,7 +32,7 @@ CPMAddPackage(
 # For Catch2, as a plugin's tests get it
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Tests.cmake)
 
-# The company names the salt and the licence file, as a plugin's does
+# The company and the product name the salt and the licence file, as a plugin's do
 juce_add_console_app(ModulesTests COMPANY_NAME Example VERSION 0.0.1)
 
 # A made-up key, so the generated key table isn't empty

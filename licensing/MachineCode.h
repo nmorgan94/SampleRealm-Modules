@@ -1,13 +1,13 @@
 namespace licensing
 {
-    /** This machine's code: 16 Crockford base32 characters, uppercase, no hyphens. */
+    /** This machine's code for this plugin: 16 Crockford base32 characters, uppercase, no hyphens. */
     class MachineCode
     {
     public:
         static constexpr int length = 16;
 
-        // The company's salt, permanent once a plugin ships: "<COMPANY_NAME>/machine-code/v1"
-        static std::string companySalt();
+        // The plugin's salt, permanent once it ships: "<COMPANY_NAME>/<PRODUCT_NAME>/machine-code/v1"
+        static std::string productSalt();
 
         // nullopt when the system gives no device ID
         static std::optional<MachineCode> forThisMachine();

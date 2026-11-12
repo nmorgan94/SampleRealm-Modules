@@ -9,8 +9,9 @@ namespace licensing
        #endif
 
         const juce::String company (config::companyName.data(), config::companyName.size());
+        const juce::String product (config::productName.data(), config::productName.size());
 
-        return base.getChildFile (company).getChildFile (company + ".licence");
+        return base.getChildFile (company).getChildFile (product + ".licence");
     }
 
     LicenceCheck checkLicenceFile (const juce::File& licenceFile,

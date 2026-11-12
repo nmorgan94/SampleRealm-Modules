@@ -25,7 +25,7 @@ public:
     // Installs the licence if it's valid here, or says why not
     void offer (const juce::String& licenceText)   { finish (actions.offer (licenceText)); }
 
-    // Hides once activated, here or by another plugin
+    // Hides once activated, here or by another instance
     void update();
 
     void paint (juce::Graphics&) override;

@@ -46,7 +46,7 @@ The npm package `@samplerealm/modules`. Imports name the file: `@samplerealm/mod
 | Folder | Holds |
 | --- | --- |
 | `Tests/` | The C++ tests, and headers a plugin's tests include: `LicenceFixtures.h`, `EditorFixtures.h`, `PluginTestHelpers.h` |
-| `Tests/plugin/` | Tests built into every plugin's tests through `licensing::fixtures`: its company name, and that it never trusts the test key |
+| `Tests/plugin/` | Tests built into every plugin's tests through `licensing::fixtures`: its company and product names, and that it never trusts the test key |
 | `Tests/fixtures/licence/` | The test key and licences, copied from the website |
 | `Tests/web/` | The web tests |
 
@@ -91,6 +91,9 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - A plugin pins a commit id, never a branch: its cache would keep the branch's first fetch.
 - The machine code recipe and the licence format can't change: shipped plugins and issued licences
   depend on them. `Tests/LicenceTests.cpp` holds the known answer.
+- A licence is for one plugin on one machine: the machine code's salt is
+  `<COMPANY_NAME>/<PRODUCT_NAME>/machine-code/v1` and the file `<COMPANY_NAME>/<PRODUCT_NAME>.licence`,
+  so neither name can change once the plugin ships.
 - Plugin builds must never trust the test key, and its private half must never be copied here.
 - `core/` builds for wasm: `juce_core` and `juce_audio_basics` only, and no `juce::String`, `var`,
   `JSON`, printf or `to_chars`.

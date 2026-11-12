@@ -70,6 +70,23 @@ TEST_CASE ("A valid licence for another machine reports wrong machine", "[licenc
     CHECK (check.payload->machine == fixtureMachine().canonical());
 }
 
+TEST_CASE ("A valid licence for another plugin on the same machine reports wrong machine", "[licence]")
+{
+    const TestKey testKey;
+    const juce::String deviceId { "one machine" };
+    const auto codeForOnePlugin = MachineCode::fromDeviceId (deviceId, "Example/One-Plugin/machine-code/v1");
+    const auto codeForAnotherPlugin = MachineCode::fromDeviceId (deviceId, "Example/Another-Plugin/machine-code/v1");
+    REQUIRE (codeForOnePlugin);
+    REQUIRE (codeForAnotherPlugin);
+
+    CHECK (codeForOnePlugin != codeForAnotherPlugin);
+
+    // The fixture's machine stands for the plugin the licence was issued to
+    const auto licence = fixtureText ("valid.licence");
+    CHECK (verifyLicence (licence, fixtureMachine(), testKey.trusted()).status == LicenceStatus::valid);
+    CHECK (verifyLicence (licence, *codeForAnotherPlugin, testKey.trusted()).status == LicenceStatus::wrongMachine);
+}
+
 TEST_CASE ("A missing licence file reports no licence file", "[licence]")
 {
     const TestKey testKey;

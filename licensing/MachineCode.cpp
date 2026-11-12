@@ -7,14 +7,14 @@ namespace licensing
         return reinterpret_cast<const std::uint8_t*> (text);
     }
 
-    std::string MachineCode::companySalt()
+    std::string MachineCode::productSalt()
     {
-        return std::string (config::companyName) + "/machine-code/v1";
+        return std::string (config::companyName) + "/" + std::string (config::productName) + "/machine-code/v1";
     }
 
     std::optional<MachineCode> MachineCode::forThisMachine()
     {
-        return fromDeviceId (juce::SystemStats::getUniqueDeviceID(), companySalt());
+        return fromDeviceId (juce::SystemStats::getUniqueDeviceID(), productSalt());
     }
 
     std::optional<MachineCode> MachineCode::fromDeviceId (const juce::String& deviceId, std::string_view salt)

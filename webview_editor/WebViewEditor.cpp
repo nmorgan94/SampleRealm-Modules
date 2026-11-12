@@ -289,7 +289,7 @@ void WebViewEditor::timerCallback()
         browser->emitEventIfBrowserIsVisible ("presetStatus", presetStatus (plugin.presets));
     }
 
-    // Once a second, in case another plugin activated this machine
+    // Once a second, in case another instance activated this plugin
     if (activationBarShowing && ++ticksSinceActivationCheck >= LevelMeter::Ballistics::updateHz && browser->isShowing())
     {
         ticksSinceActivationCheck = 0;

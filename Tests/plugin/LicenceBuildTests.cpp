@@ -6,16 +6,17 @@ using namespace licensing;
 using namespace LicenceFixtures;
 
 //==============================================================================
-TEST_CASE ("The salt and the licence file take the company's name", "[licence]")
+TEST_CASE ("The salt and the licence file take the company's and the product's names", "[licence]")
 {
     const juce::String company { JucePlugin_Manufacturer };
+    const juce::String product { LICENCE_PRODUCT_NAME };
 
-    CHECK (MachineCode::companySalt() == (company + "/machine-code/v1").toStdString());
+    CHECK (MachineCode::productSalt() == (company + "/" + product + "/machine-code/v1").toStdString());
     CHECK (MachineCode::forThisMachine()
-             == MachineCode::fromDeviceId (juce::SystemStats::getUniqueDeviceID(), MachineCode::companySalt()));
+             == MachineCode::fromDeviceId (juce::SystemStats::getUniqueDeviceID(), MachineCode::productSalt()));
 
     const auto location = licenceFileLocation();
-    CHECK (location.getFileName() == company + ".licence");
+    CHECK (location.getFileName() == product + ".licence");
     CHECK (location.getParentDirectory().getFileName() == company);
 }
 

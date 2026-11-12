@@ -55,7 +55,7 @@ TEST_CASE_METHOD (BarFixture, "A refused licence leaves the bar up and says why"
     CHECK_FALSE (activation.isActivated());
 }
 
-TEST_CASE_METHOD (BarFixture, "The bar goes when another plugin activates this machine", "[activation][ui]")
+TEST_CASE_METHOD (BarFixture, "The bar goes when another instance activates this plugin", "[activation][ui]")
 {
     ActivationBar bar (activation, prompt);
     Activation inAnotherPlugin { fixtureMachine(), trusted, temporary.getFile() };

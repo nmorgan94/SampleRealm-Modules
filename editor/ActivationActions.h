@@ -16,7 +16,7 @@ public:
     // The code as shown: K7Q2-M9XH-4TBV-8RNC
     juce::String machineCode() const;
 
-    // Rereads the licence file, in case another plugin activated this machine
+    // Rereads the licence file, in case another instance activated this plugin
     void refresh()   { activation.refresh(); }
 
     void openBrowser();

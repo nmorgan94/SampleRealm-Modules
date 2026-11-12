@@ -1,6 +1,6 @@
 namespace licensing
 {
-    // The one licence file every plugin of the company reads: <COMPANY_NAME>/<COMPANY_NAME>.licence
+    // This plugin's own licence file: <COMPANY_NAME>/<PRODUCT_NAME>.licence
     juce::File licenceFileLocation();
 
     // Nothing longer is read, installed or imported

@@ -10,12 +10,18 @@ namespace
                 return std::make_unique<juce::AudioParameterInt> (
                     id, spec.name, juce::roundToInt (spec.min), juce::roundToInt (spec.max),
                     juce::roundToInt (spec.defaultValue),
-                    juce::AudioParameterIntAttributes().withLabel (spec.unit));
+                    juce::AudioParameterIntAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
 
             case ParameterSpecs::Kind::choice:
                 return std::make_unique<juce::AudioParameterChoice> (
                     id, spec.name, juce::StringArray (spec.choices.data(), static_cast<int> (spec.choices.size())),
-                    juce::roundToInt (spec.defaultValue));
+                    juce::roundToInt (spec.defaultValue),
+                    juce::AudioParameterChoiceAttributes().withAutomatable (spec.automatable));
+
+            case ParameterSpecs::Kind::toggle:
+                return std::make_unique<juce::AudioParameterBool> (
+                    id, spec.name, spec.defaultValue >= 0.5f,
+                    juce::AudioParameterBoolAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
 
             case ParameterSpecs::Kind::real:
                 break;
@@ -23,7 +29,8 @@ namespace
 
         return std::make_unique<juce::AudioParameterFloat> (
             id, spec.name, juce::NormalisableRange<float> (spec.min, spec.max, spec.step, spec.skew),
-            spec.defaultValue, juce::AudioParameterFloatAttributes().withLabel (spec.unit));
+            spec.defaultValue,
+            juce::AudioParameterFloatAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
     }
 }
 

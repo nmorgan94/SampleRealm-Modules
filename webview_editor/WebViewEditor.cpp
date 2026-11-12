@@ -9,9 +9,6 @@
 
 namespace
 {
-    const auto background = juce::LookAndFeel_V4::getDarkColourScheme()
-                                .getUIColour (juce::LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
-
     const char* mimeTypeFor (const juce::String& fileName)
     {
         static const std::unordered_map<juce::String, const char*> types {
@@ -87,9 +84,15 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
       uiZipStream (WebUIData::WebUI_zip, static_cast<size_t> (WebUIData::WebUI_zipSize), false)
 {
     for (const auto* spec : plugin.specs)
-        relays.push_back (std::make_unique<juce::WebSliderRelay> (spec->id));
+    {
+        if (spec->kind == ParameterSpecs::Kind::toggle)
+            toggleRelays.emplace_back (spec, std::make_unique<juce::WebToggleButtonRelay> (spec->id));
+        else
+            sliderRelays.emplace_back (spec, std::make_unique<juce::WebSliderRelay> (spec->id));
+    }
 
-    lastPresetChange = plugin.presets.getChangeCounter();
+    if (plugin.presets != nullptr)
+        lastPresetChange = plugin.presets->getChangeCounter();
 
     if (plugin.activation != nullptr)
     {
@@ -100,26 +103,32 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
     browser = std::make_unique<SinglePageBrowser> (createOptions());
     hideMacWebViewBackground (*browser);
 
-    for (size_t i = 0; i < relays.size(); ++i)
+    // Every spec needs its parameter
+    const auto parameterOf = [this] (const ParameterSpecs::Spec* spec)
     {
-        auto* parameter = plugin.parameters.getParameter (plugin.specs[i]->id);
-
-        // Every spec needs its parameter
+        auto* parameter = plugin.parameters.getParameter (spec->id);
         jassert (parameter != nullptr);
+        return parameter;
+    };
 
-        if (parameter != nullptr)
-            attachments.push_back (std::make_unique<juce::WebSliderParameterAttachment> (*parameter, *relays[i], nullptr));
-    }
+    for (auto& [spec, relay] : sliderRelays)
+        if (auto* parameter = parameterOf (spec))
+            sliderAttachments.push_back (std::make_unique<juce::WebSliderParameterAttachment> (*parameter, *relay, nullptr));
+
+    for (auto& [spec, relay] : toggleRelays)
+        if (auto* parameter = parameterOf (spec))
+            toggleAttachments.push_back (std::make_unique<juce::WebToggleButtonParameterAttachment> (*parameter, *relay, nullptr));
 
     // Drop anything played while no meter was showing
-    plugin.meter.reset();
+    if (plugin.meter != nullptr)
+        plugin.meter->reset();
 
     addAndMakeVisible (*browser);
     browser->goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
 
     jassert (plugin.width > 0 && plugin.height > 0);
     setSize (plugin.width, plugin.height);
-    startTimerHz (LevelMeter::Ballistics::updateHz);
+    startTimerHz (updateHz);
 }
 
 juce::WebBrowserComponent::Options WebViewEditor::createOptions()
@@ -128,16 +137,18 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
                        .withBackend (juce::WebBrowserComponent::Options::Backend::webview2)
                        .withWinWebView2Options (juce::WebBrowserComponent::Options::WinWebView2{}
                                                     .withUserDataFolder (juce::File::getSpecialLocation (juce::File::tempDirectory))
-                                                    .withBackgroundColour (background))
+                                                    .withBackgroundColour (plugin.background))
                        .withNativeIntegrationEnabled()
                        .withResourceProvider ([this] (const auto& url) { return getResource (url); });
 
-    for (auto& relay : relays)
-        options = options.withOptionsFrom (*relay);
+    for (auto& entry : sliderRelays)
+        options = options.withOptionsFrom (*entry.second);
+
+    for (auto& entry : toggleRelays)
+        options = options.withOptionsFrom (*entry.second);
 
     return withActivationFunctions (withPresetFunctions (options))
         .withInitialisationData ("uiInfo", juce::String (uiInfoJson (plugin.specs, JucePlugin_VersionString, buildCommit)))
-        .withInitialisationData ("presetStatus", juce::JSON::toString (presetStatus (plugin.presets), true))
         .withInitialisationData ("activationStatus", juce::JSON::toString (activationStatus(), true))
         .withInitialisationData ("running", About::running (processor));
 }
@@ -146,7 +157,11 @@ juce::WebBrowserComponent::Options WebViewEditor::withPresetFunctions (const juc
 {
     using Args = juce::Array<juce::var>;
     using Completion = juce::WebBrowserComponent::NativeFunctionCompletion;
-    auto& presets = plugin.presets;
+
+    if (plugin.presets == nullptr)
+        return options;
+
+    auto& presets = *plugin.presets;
 
     const auto userPresetCall = [&presets] (auto action)
     {
@@ -158,6 +173,7 @@ juce::WebBrowserComponent::Options WebViewEditor::withPresetFunctions (const juc
     };
 
     return options
+        .withInitialisationData ("presetStatus", juce::JSON::toString (presetStatus (presets), true))
         .withNativeFunction ("presetStatus", [&presets] (const Args&, Completion complete)
         {
             complete (presetStatus (presets));
@@ -274,23 +290,35 @@ std::optional<juce::WebBrowserComponent::Resource> WebViewEditor::getResource (c
 
 void WebViewEditor::timerCallback()
 {
-    juce::Array<juce::var> peaks;
-
-    for (int channel = 0; channel < plugin.meter.getNumChannels(); ++channel)
-        peaks.add (plugin.meter.readAndReset (channel));
-
-    auto level = std::make_unique<juce::DynamicObject>();
-    level->setProperty ("peaks", peaks);
-    browser->emitEventIfBrowserIsVisible ("level", juce::var (level.release()));
-
-    if (const auto change = plugin.presets.getChangeCounter(); change != lastPresetChange && browser->isShowing())
+    if (plugin.meter != nullptr)
     {
-        lastPresetChange = change;
-        browser->emitEventIfBrowserIsVisible ("presetStatus", presetStatus (plugin.presets));
+        juce::Array<juce::var> peaks;
+
+        for (int channel = 0; channel < plugin.meter->getNumChannels(); ++channel)
+            peaks.add (plugin.meter->readAndReset (channel));
+
+        auto level = std::make_unique<juce::DynamicObject>();
+        level->setProperty ("peaks", peaks);
+        browser->emitEventIfBrowserIsVisible ("level", juce::var (level.release()));
     }
 
+    if (plugin.presets != nullptr)
+    {
+        if (const auto change = plugin.presets->getChangeCounter(); change != lastPresetChange && browser->isShowing())
+        {
+            lastPresetChange = change;
+            browser->emitEventIfBrowserIsVisible ("presetStatus", presetStatus (*plugin.presets));
+        }
+    }
+
+    if (plugin.onTick != nullptr && browser->isShowing())
+        plugin.onTick ([this] (const juce::Identifier& name, const juce::var& payload)
+        {
+            browser->emitEventIfBrowserIsVisible (name, payload);
+        });
+
     // Once a second, in case another instance activated this plugin
-    if (activationBarShowing && ++ticksSinceActivationCheck >= LevelMeter::Ballistics::updateHz && browser->isShowing())
+    if (activationBarShowing && ++ticksSinceActivationCheck >= updateHz && browser->isShowing())
     {
         ticksSinceActivationCheck = 0;
         activation->refresh();
@@ -305,7 +333,7 @@ void WebViewEditor::timerCallback()
 
 void WebViewEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (background);
+    g.fillAll (plugin.background);
 }
 
 void WebViewEditor::resized()

@@ -60,7 +60,9 @@ public:
 
     juce::Slider& getSlider() noexcept { return slider; }
 
-    // Other labelled controls can use these two to match and line up with this one
+    // Other labelled controls can use these to match and line up with this one
+
+    static constexpr int labelHeight = 24;
 
     static void styleLabel (juce::Label& labelBelow)
     {
@@ -71,7 +73,6 @@ public:
     /** Puts the label right under a square control area, the pair centred, and returns that area. */
     static juce::Rectangle<int> layOutAboveLabel (juce::Label& labelBelow, juce::Rectangle<int> bounds)
     {
-        constexpr int labelHeight = 24;
         const auto size = std::max (0, std::min (bounds.getWidth(), bounds.getHeight() - labelHeight));
         bounds = bounds.withSizeKeepingCentre (bounds.getWidth(), size + labelHeight);
         labelBelow.setBounds (bounds.removeFromBottom (labelHeight));

@@ -1,4 +1,4 @@
-type ParamKind = 'real' | 'integer' | 'choice';
+type ParamKind = 'real' | 'integer' | 'choice' | 'toggle';
 
 export interface ParamInfo {
   id: string;
@@ -77,11 +77,11 @@ export interface ActivationBackend {
 
 export const isSamePreset = (a: PresetEntry, b: PresetEntry) => a.name === b.name && a.isFactory === b.isFactory;
 
-export interface PluginBackend {
+// What every editor has. A plugin with the header's presets and meter has a PluginBackend
+export interface EditorBackend {
   info: UiInfo;
   // "VST3 in Ableton Live", or where else the editor is running
   running: string;
-  presets: PresetBackend;
   // Only in a plugin built to require activation
   activation?: ActivationBackend;
   param(id: string): ParamInfo;
@@ -91,6 +91,10 @@ export interface PluginBackend {
   beginGesture(id: string): void;
   endGesture(id: string): void;
   subscribe(id: string, listener: (value: number) => void): () => void;
+}
+
+export interface PluginBackend extends EditorBackend {
+  presets: PresetBackend;
   onLevel(listener: (level: Level) => void): () => void;
 }
 

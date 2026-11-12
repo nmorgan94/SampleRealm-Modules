@@ -8,9 +8,11 @@ export interface Rect {
 // juce::Rectangle::withSizeKeepingCentre
 export const centred = (outer: number, inner: number) => Math.trunc((outer - inner) / 2);
 
+// LabeledSlider::labelHeight
+export const LABEL_HEIGHT = 24;
+
 // editor/LabeledSlider.h's layOutAboveLabel: the label right under a square control, the pair centred
 export function layOutAboveLabel(width: number, height: number): { control: Rect; label: Rect } {
-  const LABEL_HEIGHT = 24;
   const size = Math.max(0, Math.min(width, height - LABEL_HEIGHT));
   const top = centred(height, size + LABEL_HEIGHT);
   return {

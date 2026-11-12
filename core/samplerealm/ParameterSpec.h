@@ -8,7 +8,7 @@
 /** What a parameter is. A plugin's ParameterSpecs.h adds its own specs and `all`, the host's order. */
 namespace ParameterSpecs
 {
-    enum class Kind { real, integer, choice };
+    enum class Kind { real, integer, choice, toggle };
 
     struct Spec
     {
@@ -20,6 +20,7 @@ namespace ParameterSpecs
         float skew = 1.0f;
         const char* unit = "";
         std::span<const char* const> choices = {};
+        bool automatable = true;
     };
 
     constexpr Spec integer (const char* id, const char* name, int min, int max, int defaultValue, const char* unit = "")
@@ -34,17 +35,34 @@ namespace ParameterSpecs
                  static_cast<float> (defaultValue), 1.0f, 1.0f, "", choices };
     }
 
-    /** Integer and choice specs need step 1, and a choice spec's range is 0 to its last choice. */
+    /** An on/off parameter: 0 or 1. */
+    constexpr Spec toggle (const char* id, const char* name, bool defaultValue)
+    {
+        return { id, name, Kind::toggle, 0.0f, 1.0f, defaultValue ? 1.0f : 0.0f, 1.0f, 1.0f };
+    }
+
+    /** For a display switch, say, which hosts shouldn't automate: notAutomatable (toggle (...)) */
+    constexpr Spec notAutomatable (Spec spec)
+    {
+        spec.automatable = false;
+        return spec;
+    }
+
+    /** Integer, choice and toggle specs need step 1, a choice spec's range is 0 to its last choice, and a toggle is 0 or 1 with no choices. */
     constexpr bool areValid (std::span<const Spec* const> specs)
     {
         return std::ranges::all_of (specs, [] (const Spec* spec)
         {
-            if (spec->kind == Kind::real)
-                return true;
+            switch (spec->kind)
+            {
+                case Kind::real:    return true;
+                case Kind::integer: return spec->step == 1.0f;
+                case Kind::toggle:  return spec->step == 1.0f && spec->min == 0.0f && spec->max == 1.0f
+                                        && (spec->defaultValue == 0.0f || spec->defaultValue == 1.0f) && spec->choices.empty();
+                case Kind::choice:  break;
+            }
 
-            return spec->step == 1.0f
-                && (spec->kind == Kind::integer
-                    || (spec->min == 0.0f && static_cast<size_t> (spec->max) == spec->choices.size() - 1));
+            return spec->step == 1.0f && spec->min == 0.0f && static_cast<size_t> (spec->max) == spec->choices.size() - 1;
         });
     }
 }

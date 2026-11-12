@@ -37,6 +37,8 @@ const decimalPlaces = (step: number) => {
 export const formatValue = (param: ParamInfo, value: number) => {
   if (param.kind === 'choice') return param.choices[Math.round(value)] ?? '';
   if (param.kind === 'integer') return `${Math.round(value)}`;
+  // juce::AudioParameterBool's default text
+  if (param.kind === 'toggle') return value >= 0.5 ? 'On' : 'Off';
 
   return value.toFixed(decimalPlaces(param.step));
 };

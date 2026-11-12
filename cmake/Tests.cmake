@@ -2,7 +2,7 @@
 # each test case with CTest. The tests drive the AudioProcessor directly, the way a host
 # would, so they check what the plugin does to audio and state rather than just that it loads.
 #
-# Usage (from the top-level CMakeLists.txt, AFTER juce_add_plugin, add_pluginval_tests and add_licensing):
+# Usage (from the top-level CMakeLists.txt, AFTER juce_add_plugin, add_pluginval_tests and add_plugin_editor):
 #     include(${SampleRealm-Modules_SOURCE_DIR}/cmake/Tests.cmake)
 #     add_unit_tests(${PROJECT_NAME})
 

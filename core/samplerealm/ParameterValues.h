@@ -20,7 +20,7 @@ public:
 
     /**
      * By position in the host's order. A position that isn't there, or a NaN, is ignored. As the
-     * APVTS, the value is kept inside the spec's range, and whole for an integer or a choice.
+     * APVTS, the value is kept inside the spec's range, and whole for an integer, a choice or a toggle.
      */
     void set (int index, float value)
     {

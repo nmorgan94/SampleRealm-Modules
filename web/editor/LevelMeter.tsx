@@ -11,7 +11,9 @@ const MAX_CHANNELS = 2;
 const widthFor = (numChannels: number) => BAR_WIDTH * numChannels + GAP * (numChannels - 1);
 export const PREFERRED_WIDTH = widthFor(MAX_CHANNELS);
 
-function useBars(backend: PluginBackend) {
+type LevelSource = Pick<PluginBackend, 'onLevel'>;
+
+function useBars(backend: LevelSource) {
   const [bars, setBars] = useState<Bar[]>(() => Array.from({ length: MAX_CHANNELS }, emptyBar));
   // The loudest peak per channel since the last tick
   const pending = useRef<number[]>(new Array(MAX_CHANNELS).fill(0));
@@ -59,7 +61,7 @@ function BarView({ x, height, bar }: { x: number; height: number; bar: Bar }) {
   );
 }
 
-export function LevelMeter({ backend, x, y, width, height }: { backend: PluginBackend; x: number; y: number; width: number; height: number }) {
+export function LevelMeter({ backend, x, y, width, height }: { backend: LevelSource; x: number; y: number; width: number; height: number }) {
   const bars = useBars(backend);
   const start = centred(width, widthFor(bars.length));
 

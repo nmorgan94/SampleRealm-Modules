@@ -57,7 +57,8 @@ class EngineProcessor extends AudioWorkletProcessor {
 
     output.forEach((channel, index) => channel.set(this.view(Math.min(index, this.channels - 1), frames)));
 
-    if (++this.blocks % LEVEL_EVERY_BLOCKS === 0) {
+    // An engine without a meter has no peak
+    if (this.engine.peak && ++this.blocks % LEVEL_EVERY_BLOCKS === 0) {
       const peaks = Array.from({ length: this.channels }, (_, channel) => this.engine.peak(channel));
       const silent = peaks.every((peak) => peak === 0);
       if (!silent || !this.lastSilent) this.port.postMessage({ type: 'level', peaks });

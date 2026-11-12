@@ -6,18 +6,32 @@ class WebViewEditor final : public juce::AudioProcessorEditor,
                             private juce::Timer
 {
 public:
+    static constexpr int updateHz = LevelMeter::Ballistics::updateHz;
+
+    /** Sends the page an event. Only for use inside the onTick call it's passed to. */
+    using EmitEvent = std::function<void (const juce::Identifier& name, const juce::var& payload)>;
+
     struct Plugin
     {
         std::span<const ParameterSpecs::Spec* const> specs;
         juce::AudioProcessorValueTreeState& parameters;
-        PresetManager& presets;
-        PeakMeter& meter;
+
+        // Null for a plugin without the header's presets or meter: its page uses editorBackend()
+        PresetManager* presets = nullptr;
+        PeakMeter* meter = nullptr;
 
         // Null in a build that doesn't require activation
         licensing::Activation* activation = nullptr;
 
         int width;
         int height;
+
+        // Shown until the page draws
+        juce::Colour background = juce::LookAndFeel_V4::getDarkColourScheme()
+                                      .getUIColour (juce::LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
+
+        // Called updateHz times a second while the page is showing, for the plugin's own events
+        std::function<void (const EmitEvent&)> onTick = nullptr;
     };
 
     WebViewEditor (juce::AudioProcessor&, const Plugin&);
@@ -40,10 +54,15 @@ private:
     bool activationBarShowing = false;
     int ticksSinceActivationCheck = 0;
 
+    template <typename Relay>
+    using RelaysBySpec = std::vector<std::pair<const ParameterSpecs::Spec*, std::unique_ptr<Relay>>>;
+
     // Declaration order matters: relays, browser, attachments
-    std::vector<std::unique_ptr<juce::WebSliderRelay>> relays;
+    RelaysBySpec<juce::WebSliderRelay> sliderRelays;
+    RelaysBySpec<juce::WebToggleButtonRelay> toggleRelays;
     std::unique_ptr<juce::WebBrowserComponent> browser;
-    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> attachments;
+    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> sliderAttachments;
+    std::vector<std::unique_ptr<juce::WebToggleButtonParameterAttachment>> toggleAttachments;
 
     juce::uint32 lastPresetChange = 0;
 

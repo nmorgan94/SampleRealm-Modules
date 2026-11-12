@@ -57,6 +57,36 @@ TEST_CASE ("Integer and choice specs take whole steps, and a choice runs to its 
     CHECK_FALSE (areValid (std::array { &oneChoiceShort }));
 }
 
+TEST_CASE ("A toggle is 0 or 1, automatable unless it says otherwise", "[core][parameters]")
+{
+    using namespace ParameterSpecs;
+
+    constexpr auto mute = toggle ("mute", "Mute", true);
+    constexpr auto scope = notAutomatable (toggle ("scope", "Scope", false));
+    constexpr Spec upToTwo { "mute", "Mute", Kind::toggle, 0.0f, 2.0f, 0.0f, 1.0f };
+
+    CHECK (areValid (std::array { &mute, &scope }));
+    constexpr Spec halfOn { "mute", "Mute", Kind::toggle, 0.0f, 1.0f, 0.5f, 1.0f };
+
+    CHECK_FALSE (areValid (std::array { &upToTwo }));
+    CHECK_FALSE (areValid (std::array { &halfOn }));
+
+    CHECK_THAT (mute.defaultValue, WithinAbs (1.0, 0.0));
+    CHECK (mute.automatable);
+    CHECK_FALSE (scope.automatable);
+    CHECK (Specs::gain.automatable);
+
+    // Whole, as an integer
+    ParameterValues values { std::array { &mute } };
+    values.set (0, 0.4f);
+    CHECK_THAT (values (mute), WithinAbs (0.0, 0.0));
+    values.set (0, 3.0f);
+    CHECK_THAT (values (mute), WithinAbs (1.0, 0.0));
+
+    CHECK (uiInfoJson (std::array { &mute }, "0.0.1", "unknown") == std::string (R"({"version":"0.0.1","commit":"unknown","build":")") + BuildType::name
+        + R"(","params":[{"id":"mute","name":"Mute","kind":"toggle","min":0,"max":1,"defaultValue":1,"step":1,"skew":1,"unit":"","choices":[]}]})");
+}
+
 TEST_CASE ("Parameter values start at their defaults and are set by the host's order", "[core][parameters]")
 {
     ParameterValues values { Specs::all };

@@ -1,27 +1,31 @@
 // Mirrors editor/LabeledSlider.h and how LookAndFeel_V4 draws it
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { PluginBackend } from '../backend.ts';
+import { useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
+import type { EditorBackend } from '../backend.ts';
 import { juceHeight } from './fonts.ts';
 import { useParam } from './hooks.ts';
 import { layOutAboveLabel, type Rect } from './layout.ts';
 import { formatValue, fromProportion, parseValue, toProportion } from './params.ts';
 
 // juce::Slider's defaults
-const ROTARY_START = 1.2 * Math.PI;
-const ROTARY_END = 2.8 * Math.PI;
+export const ROTARY_START = 1.2 * Math.PI;
+export const ROTARY_END = 2.8 * Math.PI;
 const PIXELS_FOR_FULL_DRAG = 250;
 
 // Angles run clockwise from 12 o'clock, as in juce::Path::addCentredArc
-const pointAt = (cx: number, cy: number, radius: number, angle: number) =>
+const pointAt =(cx: number, cy: number, radius: number, angle: number) =>
   [cx + radius * Math.sin(angle), cy - radius * Math.cos(angle)] as const;
 
-const arcPath = (cx: number, cy: number, radius: number, from: number, to: number) => {
+export const arcPath = (cx: number, cy: number, radius: number, from: number, to: number) => {
   const [x1, y1] = pointAt(cx, cy, radius, from);
   const [x2, y2] = pointAt(cx, cy, radius, to);
   return `M ${x1} ${y1} A ${radius} ${radius} 0 ${to - from > Math.PI ? 1 : 0} 1 ${x2} ${y2}`;
 };
 
-function RotaryGraphic({ width, height, proportion }: { width: number; height: number; proportion: number }) {
+// What a plugin's LookAndFeel::drawRotarySlider draws, in the slider's bounds
+export type RotaryProps = { width: number; height: number; proportion: number };
+export type Rotary = ComponentType<RotaryProps>;
+
+function RotaryGraphic({ width, height, proportion }: RotaryProps) {
   const inner = { width: width - 20, height: height - 20 };
   const cx = width / 2;
   const cy = height / 2;
@@ -54,22 +58,29 @@ export const styleLabel = (box: Rect) => ({
 });
 
 interface LabeledSliderProps {
-  backend: PluginBackend;
+  backend: EditorBackend;
   id: string;
   label: string;
   width: number;
   height: number;
+  // As Slider::setTextValueSuffix, where it isn't the parameter's own
+  unit?: string;
+  // LookAndFeel_V4's unless given
+  rotary?: Rotary;
+  // As the LookAndFeel's drawLabel: a box behind the name, say. The typing box keeps its own
+  labelClassName?: string;
 }
 
 // A Slider::RotaryHorizontalVerticalDrag with its name below, which shows the value while it's being moved. Click the name to type a value.
-export function LabeledSlider({ backend, id, label, width, height }: LabeledSliderProps) {
+export function LabeledSlider({ backend, id, label, width, height, unit, rotary: Graphic = RotaryGraphic, labelClassName = '' }: LabeledSliderProps) {
   const { value, set, commit, param } = useParam(backend, id);
   const drag = useRef<DragStart | null>(null);
   const nameTimer = useRef<number>();
   const [showValue, setShowValue] = useState(false);
   const [editing, setEditing] = useState(false);
   const proportion = toProportion(param, value);
-  const text = param.unit ? `${formatValue(param, value)} ${param.unit}` : formatValue(param, value);
+  const suffix = unit ?? param.unit;
+  const text = suffix ? `${formatValue(param, value)} ${suffix}` : formatValue(param, value);
 
   const layout = layOutAboveLabel(width, height);
   const nameLabel = styleLabel(layout.label);
@@ -135,7 +146,7 @@ export function LabeledSlider({ backend, id, label, width, height }: LabeledSlid
         // As SliderAttachment's setDoubleClickReturnValue
         onDoubleClick={() => commit(param.defaultValue)}
       >
-        <RotaryGraphic width={layout.control.width} height={layout.control.height} proportion={proportion} />
+        <Graphic width={layout.control.width} height={layout.control.height} proportion={proportion} />
       </div>
       {editing ? (
         <input
@@ -155,7 +166,7 @@ export function LabeledSlider({ backend, id, label, width, height }: LabeledSlid
         />
       ) : (
         <div
-          className={`${nameLabel.className} cursor-text`}
+          className={`${nameLabel.className} cursor-text ${labelClassName}`}
           style={nameLabel.style}
           onClick={() => {
             clearTimeout(nameTimer.current);

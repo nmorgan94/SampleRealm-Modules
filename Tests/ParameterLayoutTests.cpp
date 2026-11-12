@@ -12,7 +12,9 @@ namespace
     constexpr ParameterSpecs::Spec level { "level", "Level", ParameterSpecs::Kind::real, -60.0f, 6.0f, -12.0f, 0.5f, 2.0f, "dB" };
     constexpr auto voices = ParameterSpecs::integer ("voices", "Voices", 1, 8, 4, "v");
     constexpr auto shape = ParameterSpecs::choice ("shape", "Shape", shapes, 1);
-    constexpr std::array specs { &level, &voices, &shape };
+    constexpr auto mute = ParameterSpecs::toggle ("mute", "Mute", true);
+    constexpr auto scope = ParameterSpecs::notAutomatable (ParameterSpecs::toggle ("scope", "Scope", false));
+    constexpr std::array specs { &level, &voices, &shape, &mute, &scope };
 }
 
 //==============================================================================
@@ -23,7 +25,7 @@ TEST_CASE ("The layout has a parameter of the right kind for each spec, in order
     juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (specs, 3) };
 
     const auto& parameters = host.getParameters();
-    REQUIRE (parameters.size() == 3);
+    REQUIRE (parameters.size() == 5);
 
     auto* levelParameter = dynamic_cast<juce::AudioParameterFloat*> (parameters[0]);
     REQUIRE (levelParameter != nullptr);
@@ -51,4 +53,21 @@ TEST_CASE ("The layout has a parameter of the right kind for each spec, in order
     CHECK (shapeParameter->getVersionHint() == 3);
     CHECK (shapeParameter->choices == juce::StringArray { "Sine", "Saw", "Square" });
     CHECK (shapeParameter->getCurrentChoiceName() == "Saw");
+
+    auto* muteParameter = dynamic_cast<juce::AudioParameterBool*> (parameters[3]);
+    REQUIRE (muteParameter != nullptr);
+    CHECK (muteParameter->getParameterID() == "mute");
+    CHECK (muteParameter->getName (32) == "Mute");
+    CHECK (muteParameter->getVersionHint() == 3);
+    CHECK (muteParameter->get());
+    CHECK (muteParameter->isAutomatable());
+
+    auto* scopeParameter = dynamic_cast<juce::AudioParameterBool*> (parameters[4]);
+    REQUIRE (scopeParameter != nullptr);
+    CHECK_FALSE (scopeParameter->get());
+    CHECK_FALSE (scopeParameter->isAutomatable());
+
+    CHECK (levelParameter->isAutomatable());
+    CHECK (voicesParameter->isAutomatable());
+    CHECK (shapeParameter->isAutomatable());
 }

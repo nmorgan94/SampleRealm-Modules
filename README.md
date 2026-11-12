@@ -75,6 +75,23 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - A plugin's web tests run as `node --import @samplerealm/modules/testing/typescript.mjs --test ...`,
   because Node won't run TypeScript from `node_modules`.
 
+### A plugin without the header
+
+- `WebViewEditor::Plugin` takes `presets` and `meter` as pointers, null by default. Its page then
+  uses `editorBackend()`, an `EditorBackend`, in place of `pluginBackend()`, adding `onLevel` if it has a meter.
+- `DemoFrame` takes an `overlay`, shown over the editor without being scaled with it.
+- `LabeledSlider::labelHeight`, and `LABEL_HEIGHT` in `layout.ts`, are the height it adds under the knob.
+- `Plugin::onTick` sends the plugin's own events to the page, and `Plugin::background` is its colour.
+- `LabeledSlider.tsx` takes the plugin's `rotary` drawing, a `unit`, and a `labelClassName` for
+  what its LookAndFeel's `drawLabel` adds, such as a box behind the name.
+- A `toggle (...)` spec is an `AudioParameterBool`; `notAutomatable (...)` around any spec keeps hosts from automating it.
+- `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits.
+
+### A plugin without activation
+
+It has no licensing code: it leaves out `add_licensing`, `PLUGIN_REQUIRE_ACTIVATION`, `Plugin::activation`
+and the activation bar. `add_plugin_editor` brings the licensing module in with no keys.
+
 ### What the plugin supplies to the editor
 
 - Native colours: its LookAndFeel sets the colour IDs of `HeaderBar`, `ModalOverlay`, `ActivationBar`
@@ -99,5 +116,5 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
   `JSON`, printf or `to_chars`.
 - A plugin's wasm engine exports `uiInfo()`, `prepare(sampleRate, channels)`, `setParam(index, value)`,
   `channel(index)` (an effect's input is written there, and the output read back),
-  `render(numSamples)` and `peak(index)`. An effect adds `setTransport(bpm, playing, ppq)`, a synth
+  `render(numSamples)` and, for a plugin with a meter, `peak(index)`. An effect adds `setTransport(bpm, playing, ppq)`, a synth
   `midi(status, data1, data2)`. `web/demo/processor.js` and `web/testing/engine.ts` rely on these.

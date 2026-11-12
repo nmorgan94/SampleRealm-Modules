@@ -48,8 +48,9 @@ export function engineAt(wasmPath: string) {
   };
 }
 
-export const sine = (seconds: number, amplitude: number, frequency = 440) =>
-  Float32Array.from({ length: Math.round(seconds * sampleRate) }, (_, sample) => amplitude * Math.sin((2 * Math.PI * frequency * sample) / sampleRate));
+// `rate` for an engine prepared at another sample rate
+export const sine = (seconds: number, amplitude: number, frequency = 440, rate = sampleRate) =>
+  Float32Array.from({ length: Math.round(seconds * rate) }, (_, sample) => amplitude * Math.sin((2 * Math.PI * frequency * sample) / rate));
 
 export const maxError = (actual: ArrayLike<number>, expected: ArrayLike<number>) =>
   Array.from(actual).reduce((worst, sample, index) => Math.max(worst, Math.abs(sample - expected[index]!)), 0);

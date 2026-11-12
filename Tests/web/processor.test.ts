@@ -86,7 +86,7 @@ function fakeEngine() {
   return { engine, calls };
 }
 
-const start = (channels = 2, without: ('midi' | 'setTransport')[] = []) => {
+const start = (channels = 2, without: ('midi' | 'setTransport' | 'peak')[] = []) => {
   const { engine, calls } = fakeEngine();
   const exports = Object.fromEntries(Object.entries(engine).filter(([name]) => !without.some((missing) => missing === name)));
   const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels } });
@@ -110,6 +110,19 @@ test('an engine that can\'t be built tells the page why, and renders nothing', (
 
   assert.deepEqual(processor.posted, [{ type: 'error', message: 'Error: Not wasm' }]);
   assert.equal(processor.process([[]], [stereoOutput()]), false);
+});
+
+test('an engine without a meter renders, and no level is sent', () => {
+  const { processor } = start(2, ['peak']);
+  processor.posted.length = 0;
+
+  for (let rendered = 0; rendered < 16; rendered++) {
+    const output = stereoOutput();
+    assert.equal(processor.process([[block(0.25), block(0.25)]], [output]), true);
+    assert.equal(output[0]![0], 0.5);
+  }
+
+  assert.deepEqual(processor.posted, []);
 });
 
 test('parameters, the transport and midi reach the engine', () => {

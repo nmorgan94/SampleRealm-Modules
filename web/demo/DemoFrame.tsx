@@ -11,12 +11,14 @@ interface Props {
   height: number;
   status: DemoStatus;
   editor: ReactNode;
+  // Over the editor at the frame's own size, not scaled with it: a drop hint, say
+  overlay?: ReactNode;
   // What the page adds under the editor: its Play button or keyboard
   children?: ReactNode;
 }
 
 // The editor, scaled down to fit a narrow frame. Its colours are the plugin's tokens: background, clip
-export function DemoFrame({ width, height, status, editor, children }: Props) {
+export function DemoFrame({ width, height, status, editor, overlay, children }: Props) {
   const [scale, setScale] = useState(1);
   const content = useRef<HTMLDivElement>(null);
   const editorBox = useRef<HTMLDivElement>(null);
@@ -60,6 +62,7 @@ export function DemoFrame({ width, height, status, editor, children }: Props) {
             )}
           </div>
         )}
+        {overlay}
       </div>
 
       {children}

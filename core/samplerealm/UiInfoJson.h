@@ -49,6 +49,7 @@ inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> spec
         {
             case ParameterSpecs::Kind::integer: return "integer";
             case ParameterSpecs::Kind::choice:  return "choice";
+            case ParameterSpecs::Kind::toggle:  return "toggle";
             case ParameterSpecs::Kind::real:    break;
         }
 

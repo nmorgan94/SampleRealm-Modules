@@ -6,6 +6,9 @@
 #
 # The plugin's tests link licensing::fixtures for LicenceFixtures.h, the test licences, and the
 # tests of the plugin's own company name, product name and keys.
+#
+# A plugin that never asks for activation needn't call it: add_plugin_editor does, as the editor
+# module is built on this one, and with no keys no licence verifies.
 
 include_guard(GLOBAL)
 
@@ -40,6 +43,15 @@ juce_add_module("${modulesRepoDir}/licensing")
 target_link_libraries(licensing INTERFACE monocypher)
 
 function(add_licensing pluginTarget)
+    # add_plugin_editor calls this too
+    get_target_property(alreadyAdded ${pluginTarget} SAMPLEREALM_LICENSING_ADDED)
+
+    if(alreadyAdded)
+        return()
+    endif()
+
+    set_target_properties(${pluginTarget} PROPERTIES SAMPLEREALM_LICENSING_ADDED TRUE)
+
     cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)
 
     string(STRIP "$ENV{ACTIVATION_URL}" activationUrlFromEnvironment)
@@ -107,9 +119,15 @@ function(add_licensing pluginTarget)
         message(FATAL_ERROR "licensing: PLUGIN_REQUIRE_ACTIVATION needs LICENCE_KEYS, or no machine could ever be activated")
     endif()
 
+    # A .env kept for something else, or with the keys left empty, is no mistake
+    set(keysInDotEnv "")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/.env")
+        file(STRINGS "${CMAKE_SOURCE_DIR}/.env" keysInDotEnv REGEX "LICENCE_KEYS=[\"']?[0-9a-f]")
+    endif()
+
     if(keyCount GREATER 0)
         message(STATUS "licensing: trusting ${keyCount} key(s) from ${keySource}")
-    elseif(EXISTS "${CMAKE_SOURCE_DIR}/.env")
+    elseif(keysInDotEnv)
         message(FATAL_ERROR "licensing: there is a .env but LICENCE_KEYS isn't set. Run `source .env`, then configure again")
     else()
         message(STATUS "licensing: LICENCE_KEYS isn't set, so no licence will verify")

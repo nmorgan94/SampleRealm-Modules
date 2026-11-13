@@ -101,3 +101,34 @@ TEST_CASE ("A choice reads its names in any case, then numbers, from the host an
     label.setText ("nothing", juce::sendNotificationSync);
     CHECK_THAT (shapeParameter.getValue(), WithinAbs (1.0, 1.0e-6));
 }
+
+TEST_CASE ("A real parameter can take value text of the plugin's own, and the rest keep theirs", "[parameters]")
+{
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    StubPlugin::SilentProcessor host;
+
+    std::vector<juce::String> asked;
+    const auto withLevelText = [&asked] (const ParameterSpecs::Spec& spec, juce::AudioParameterFloatAttributes attributes)
+    {
+        asked.push_back (spec.id);
+
+        if (&spec != &level)
+            return attributes;
+
+        return attributes.withStringFromValueFunction ([] (float value, int) { return "at " + juce::String (juce::roundToInt (value)); })
+                         .withValueFromStringFunction ([] (const juce::String& text) { return text.fromFirstOccurrenceOf ("at ", false, false).getFloatValue(); });
+    };
+
+    juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (specs, 1, withLevelText) };
+
+    // Only real specs are asked about
+    CHECK (asked == std::vector<juce::String> { "level" });
+
+    auto& levelParameter = *apvts.getParameter ("level");
+    CHECK (levelParameter.getText (levelParameter.convertTo0to1 (-12.0f), 100) == "at -12");
+    CHECK_THAT (levelParameter.convertFrom0to1 (levelParameter.getValueForText ("at 3")), WithinAbs (3.0, 1.0e-4));
+    CHECK (levelParameter.getLabel() == "dB");
+
+    auto& voicesParameter = *apvts.getParameter ("voices");
+    CHECK (voicesParameter.getText (voicesParameter.getValue(), 100) == "4");
+}

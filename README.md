@@ -101,6 +101,11 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `LevelMeter.tsx` takes `channels`, the bars shown before the first level.
 - `TestHelpers::process (processor, buffer, message)` plays one MIDI message at the start of the block, for a synth.
 - A `toggle (...)` spec is an `AudioParameterBool`; `notAutomatable (...)` around any spec keeps hosts from automating it.
+- `performanceControl (...)` around a spec, such as pitch bend, marks it played live: give
+  `PresetManager::performanceControlIds (specs)` to `PresetManager::Config::ignoredParameterIds`, so presets don't save it and moving it isn't an edit. The web
+  demo's presets do the same from `uiInfo`, where `isPerformanceControl` is there only when true.
+- `createParameterLayout (specs, versionHint, floatAttributesFor)` gives a real parameter value text of the plugin's own.
+- `WorkletBackend.showValue (id, value)` shows a value the engine set itself, from MIDI say, without sending it back.
 - `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits, and
   `initialData (name)` reads what `Plugin::withOptions` adds.
 

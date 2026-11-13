@@ -172,3 +172,33 @@ test('a stored preset loads past ids this engine doesn\'t have', async () => {
   assert.equal(backend.getValue('gain'), -3);
   assert.equal(backend.presets.status().current.name, 'Other');
 });
+
+test('a performance control doesn\'t mark the preset modified, isn\'t saved, and resets on load', async () => {
+  const bend: ParamInfo = { ...param('bend', 0), isPerformanceControl: true };
+  const storage = memoryStorage();
+  const backend = workletBackend({ ...info, params: [...info.params, bend] }, { storageKey: KEY, storage });
+
+  backend.setValue('bend', 3);
+  assert.equal(backend.presets.status().modified, false);
+
+  assert.equal(await backend.presets.save('Mine', ''), null);
+  assert.deepEqual(Object.keys(JSON.parse(storage.items.get(KEY)!)[0].values), ['gain', 'tone']);
+
+  await backend.presets.load({ name: 'Mine', category: '', isFactory: false });
+  assert.equal(backend.getValue('bend'), 0);
+});
+
+test('a value shown for the engine notifies the editor but isn\'t sent back, and isn\'t an edit', () => {
+  const backend = workletBackend(info, { storageKey: KEY });
+  const { port, posted } = fakePort();
+  backend.attach(port);
+  const heard: number[] = [];
+  backend.subscribe('gain', (value) => heard.push(value));
+
+  backend.showValue('gain', -6);
+
+  assert.equal(backend.getValue('gain'), -6);
+  assert.deepEqual(heard, [-6]);
+  assert.deepEqual(posted, []);
+  assert.equal(backend.presets.status().modified, false);
+});

@@ -87,6 +87,20 @@ TEST_CASE ("A toggle is 0 or 1, automatable unless it says otherwise", "[core][p
         + R"(","params":[{"id":"mute","name":"Mute","kind":"toggle","min":0,"max":1,"defaultValue":1,"step":1,"skew":1,"unit":"","choices":[]}]})");
 }
 
+TEST_CASE ("A performance control says so to the web editor, and stays automatable", "[core][parameters]")
+{
+    using namespace ParameterSpecs;
+
+    constexpr auto bend = performanceControl ({ "bend", "Bend", Kind::real, -1.0f, 1.0f, 0.0f, 0.01f });
+
+    CHECK (bend.isPerformanceControl);
+    CHECK (bend.automatable);
+    CHECK_FALSE (Specs::gain.isPerformanceControl);
+
+    CHECK (uiInfoJson (std::array { &bend }, "0.0.1", "unknown") == std::string (R"({"version":"0.0.1","commit":"unknown","build":")") + BuildType::name
+        + R"(","params":[{"id":"bend","name":"Bend","kind":"real","min":-1,"max":1,"defaultValue":0,"step":0.01,"skew":1,"unit":"","choices":[],"isPerformanceControl":true}]})");
+}
+
 TEST_CASE ("Parameter values start at their defaults and are set by the host's order", "[core][parameters]")
 {
     ParameterValues values { Specs::all };

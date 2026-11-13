@@ -97,6 +97,50 @@ TEST_CASE_METHOD (PresetFixture, "Changing state outside the parameters marks th
     CHECK (presets.isModified());
 }
 
+namespace
+{
+    // Gain played live, as a pitch bend would be
+    struct IgnoredGainFixture : PreparedProcessor<StubPlugin::Processor>
+    {
+        ~IgnoredGainFixture()   { userDirectory.deleteRecursively(); }
+
+        juce::File userDirectory = juce::File::createTempFile ("presets");
+
+        PresetManager presets { processor.getAPVTS(), [this]
+        {
+            PresetManager::Config config;
+            config.fileExtension = ".srtest";
+            config.userDirectory = userDirectory;
+            config.ignoredParameterIds = { StubPlugin::gainId.getParamID() };
+            return config;
+        }() };
+    };
+}
+
+TEST_CASE ("Presets ignore the specs marked as performance controls", "[presets]")
+{
+    using namespace ParameterSpecs;
+
+    constexpr auto bend = performanceControl ({ "bend", "Bend", Kind::real, -1.0f, 1.0f, 0.0f, 0.01f });
+    constexpr auto range = integer ("range", "Range", 0, 24, 2);
+    constexpr auto wheel = performanceControl (integer ("wheel", "Wheel", 0, 127, 0));
+
+    CHECK (PresetManager::performanceControlIds (std::array { &bend, &range, &wheel }) == std::vector<juce::String> { "bend", "wheel" });
+    CHECK (PresetManager::performanceControlIds (std::array { &range }).empty());
+}
+
+TEST_CASE_METHOD (IgnoredGainFixture, "An ignored parameter doesn't mark the preset modified, isn't saved, and resets on load", "[presets]")
+{
+    setParameter (processor, StubPlugin::gainId, 6.0f);
+    CHECK_FALSE (presets.isModified());
+
+    REQUIRE (presets.saveUserPreset ("Mine", {}).wasOk());
+    CHECK_FALSE (userDirectory.getChildFile ("Mine.srtest").loadFileAsString().contains ("\"gain\""));
+
+    REQUIRE (presets.loadPreset (presets.find ("Mine", false).value()));
+    CHECK_THAT (getParameter (processor, StubPlugin::gainId), WithinAbs (0.0, 1.0e-4));
+}
+
 TEST_CASE_METHOD (PresetFixture, "Init restores the defaults", "[presets]")
 {
     REQUIRE (presets.loadPreset (presets.find ("Boost +6", true).value()));

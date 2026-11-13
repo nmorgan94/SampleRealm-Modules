@@ -16,6 +16,8 @@ export type WorkletBackend = PluginBackend & {
   midi(bytes: ArrayLike<number>): void;
   noteOn(note: number, velocity?: number): void;
   noteOff(note: number): void;
+  // Shows a value the engine set itself, from MIDI say, without sending it back
+  showValue(id: string, value: number): void;
 };
 
 const NOTE_ON = 0x90;
@@ -55,11 +57,15 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     else pending.push(message);
   };
 
-  const apply = (id: string, value: number) => {
+  const showValue = (id: string, value: number) => {
     const found = entry(id);
-    post({ type: 'param', index: found.index, value });
     found.value = value;
     found.listeners.notify(value);
+  };
+
+  const apply = (id: string, value: number) => {
+    post({ type: 'param', index: entry(id).index, value });
+    showValue(id, value);
   };
 
   const midi = (bytes: ArrayLike<number>) => {
@@ -74,7 +80,10 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     factory: factoryPresets,
     parse: parseState,
     init: { values: {} },
-    capture: () => ({ values: Object.fromEntries(info.params.map(({ id }) => [id, entry(id).value])) }),
+    // As PresetManager::Config::ignoredParameterIds: a performance control isn't saved, so a load resets it
+    capture: () => ({
+      values: Object.fromEntries(info.params.filter(({ isPerformanceControl }) => !isPerformanceControl).map(({ id }) => [id, entry(id).value])),
+    }),
     // Ids this engine doesn't have are skipped, as the APVTS skips them. A value that isn't a number loads as the default
     apply: ({ values = {} }) =>
       info.params.forEach(({ id, defaultValue }) => {
@@ -91,7 +100,7 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     getValue: (id) => entry(id).value,
     setValue: (id, value) => {
       apply(id, value);
-      presets.markModified();
+      if (!entry(id).param.isPerformanceControl) presets.markModified();
     },
     beginGesture: () => {},
     endGesture: () => {},
@@ -101,6 +110,7 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     midi,
     noteOn: (note, velocity = 100) => midi([NOTE_ON, note, velocity]),
     noteOff: (note) => midi([NOTE_OFF, note, 0]),
+    showValue,
     attach: (enginePort) => {
       port = enginePort;
       port.onmessage = ({ data }) => {

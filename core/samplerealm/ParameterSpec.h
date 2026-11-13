@@ -21,6 +21,8 @@ namespace ParameterSpecs
         const char* unit = "";
         std::span<const char* const> choices = {};
         bool automatable = true;
+        // Played live: presets don't save it, and moving it isn't an edit
+        bool isPerformanceControl = false;
     };
 
     constexpr Spec integer (const char* id, const char* name, int min, int max, int defaultValue, const char* unit = "")
@@ -45,6 +47,13 @@ namespace ParameterSpecs
     constexpr Spec notAutomatable (Spec spec)
     {
         spec.automatable = false;
+        return spec;
+    }
+
+    /** For a control played live, like pitch bend: performanceControl ({ ... }). PresetManager::Config::ignoredParameterIds takes its id. */
+    constexpr Spec performanceControl (Spec spec)
+    {
+        spec.isPerformanceControl = true;
         return spec;
     }
 

@@ -72,7 +72,13 @@ inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> spec
         json += ",\"min\":" + number (spec.min) + ",\"max\":" + number (spec.max);
         json += ",\"defaultValue\":" + number (spec.defaultValue);
         json += ",\"step\":" + number (spec.step) + ",\"skew\":" + number (spec.skew);
-        json += ",\"unit\":" + quoted (spec.unit) + ",\"choices\":[" + choices + "]}";
+        json += ",\"unit\":" + quoted (spec.unit) + ",\"choices\":[" + choices + "]";
+
+        // Only where true, so other plugins' params read as before
+        if (spec.isPerformanceControl)
+            json += ",\"isPerformanceControl\":true";
+
+        json += "}";
     }
 
     return json + "]}";

@@ -1,6 +1,7 @@
 namespace
 {
-    std::unique_ptr<juce::RangedAudioParameter> makeParameter (const ParameterSpecs::Spec& spec, int versionHint)
+    std::unique_ptr<juce::RangedAudioParameter> makeParameter (const ParameterSpecs::Spec& spec, int versionHint,
+                                                               const FloatAttributesFor& floatAttributesFor)
     {
         const juce::ParameterID id { spec.id, versionHint };
 
@@ -41,21 +42,26 @@ namespace
                 break;
         }
 
+        auto attributes = juce::AudioParameterFloatAttributes().withLabel (spec.unit).withAutomatable (spec.automatable);
+
+        if (floatAttributesFor != nullptr)
+            attributes = floatAttributesFor (spec, attributes);
+
         return std::make_unique<juce::AudioParameterFloat> (
             id, spec.name, juce::NormalisableRange<float> (spec.min, spec.max, spec.step, spec.skew),
-            spec.defaultValue,
-            juce::AudioParameterFloatAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
+            spec.defaultValue, attributes);
     }
 }
 
 //==============================================================================
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout (std::span<const ParameterSpecs::Spec* const> specs,
-                                                                           int versionHint)
+                                                                           int versionHint,
+                                                                           const FloatAttributesFor& floatAttributesFor)
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     for (const auto* spec : specs)
-        layout.add (makeParameter (*spec, versionHint));
+        layout.add (makeParameter (*spec, versionHint, floatAttributesFor));
 
     return layout;
 }

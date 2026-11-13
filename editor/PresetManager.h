@@ -17,7 +17,14 @@ public:
 
         // Only presets of the current type (or none) are listed, and Init keeps it
         juce::String typeParameterId;
+
+        // Performance controls, like pitch bend: presets don't save them, so loading one resets them,
+        // and their changes don't mark the preset modified. performanceControlIds gives them from the specs
+        std::vector<juce::String> ignoredParameterIds;
     };
+
+    /** The ids of the specs marked performanceControl, for Config::ignoredParameterIds. */
+    static std::vector<juce::String> performanceControlIds (std::span<const ParameterSpecs::Spec* const> specs);
 
     struct Preset
     {
@@ -89,6 +96,7 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     const Config config;
     juce::Array<Preset> factoryPresets;
+    juce::Array<int> ignoredParameterIndices;
 
     // Scanned lazily, so plugin instances that never show a preset list don't read the folder
     mutable juce::Array<Preset> userPresets;

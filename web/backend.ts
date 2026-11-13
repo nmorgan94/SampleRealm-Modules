@@ -11,6 +11,8 @@ export interface ParamInfo {
   skew: number;
   unit: string;
   choices: string[];
+  // Played live, as pitch bend: presets don't save it, and moving it isn't an edit. Only there when true
+  isPerformanceControl?: true;
 }
 
 export interface UiInfo {

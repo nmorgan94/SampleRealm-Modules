@@ -48,12 +48,31 @@ PresetManager::PresetManager (juce::AudioProcessorValueTreeState& s, Config c)
 
     sortPresets (factoryPresets);
 
+    for (const auto& id : config.ignoredParameterIds)
+    {
+        if (const auto* param = apvts.getParameter (id))
+            ignoredParameterIndices.add (param->getParameterIndex());
+        else
+            jassertfalse; // no parameter with this id
+    }
+
     apvts.processor.addListener (this);
 }
 
 PresetManager::~PresetManager()
 {
     apvts.processor.removeListener (this);
+}
+
+std::vector<juce::String> PresetManager::performanceControlIds (std::span<const ParameterSpecs::Spec* const> specs)
+{
+    std::vector<juce::String> ids;
+
+    for (const auto* spec : specs)
+        if (spec->isPerformanceControl)
+            ids.push_back (spec->id);
+
+    return ids;
 }
 
 juce::File PresetManager::getDefaultUserDirectory (const juce::String& company, const juce::String& product)
@@ -239,6 +258,10 @@ bool PresetManager::loadPrevious()  { return step (-1); }
 std::unique_ptr<juce::XmlElement> PresetManager::createPresetXml (const juce::String& name, const juce::String& category) const
 {
     auto state = apvts.copyState();
+
+    for (const auto& id : config.ignoredParameterIds)
+        state.removeChild (state.getChildWithProperty ("id", id), nullptr);
+
     auto xml = std::make_unique<juce::XmlElement> (presetTag);
     xml->setAttribute (nameAttr, name);
     xml->setAttribute (categoryAttr, category);
@@ -363,9 +386,10 @@ void PresetManager::markModified() noexcept
     ++changeCounter;
 }
 
-void PresetManager::audioProcessorParameterChanged (juce::AudioProcessor*, int, float)
+void PresetManager::audioProcessorParameterChanged (juce::AudioProcessor*, int parameterIndex, float)
 {
-    markModified();
+    if (! ignoredParameterIndices.contains (parameterIndex))
+        markModified();
 }
 
 void PresetManager::audioProcessorChanged (juce::AudioProcessor*, const ChangeDetails& details)

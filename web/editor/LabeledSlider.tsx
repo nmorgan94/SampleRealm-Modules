@@ -4,7 +4,7 @@ import type { EditorBackend, ParamInfo } from '../backend.ts';
 import { juceHeight } from './fonts.ts';
 import { useParam } from './hooks.ts';
 import { layOutAboveLabel, layOutBelowLabel, type Rect } from './layout.ts';
-import { formatValue, fromProportion, parseValue, toProportion } from './params.ts';
+import { formatValue, fromProportion, parseValue, snap, toProportion } from './params.ts';
 
 // juce::Slider's defaults
 export const ROTARY_START = 1.2 * Math.PI;
@@ -15,7 +15,7 @@ const PIXELS_FOR_FULL_DRAG = 250;
 const NAME_HEIGHT = 16;
 
 // Angles run clockwise from 12 o'clock, as in juce::Path::addCentredArc
-const pointAt =(cx: number, cy: number, radius: number, angle: number) =>
+export const pointAt = (cx: number, cy: number, radius: number, angle: number) =>
   [cx + radius * Math.sin(angle), cy - radius * Math.cos(angle)] as const;
 
 export const arcPath = (cx: number, cy: number, radius: number, from: number, to: number) => {
@@ -25,7 +25,7 @@ export const arcPath = (cx: number, cy: number, radius: number, from: number, to
 };
 
 // What a plugin's LookAndFeel::drawRotarySlider draws, in the slider's bounds
-export type RotaryProps = { width: number; height: number; proportion: number; value: number };
+export type RotaryProps = { width: number; height: number; proportion: number; value: number; param: ParamInfo };
 export type Rotary = ComponentType<RotaryProps>;
 
 function RotaryGraphic({ width, height, proportion }: RotaryProps) {
@@ -76,10 +76,14 @@ interface LabeledSliderProps {
   namePlacement?: 'below' | 'above';
   // LabeledSlider::setNameHeight
   nameHeight?: number;
+  // LabeledSlider::setLabelHeight
+  labelHeight?: number;
   // As Slider::setMouseDragSensitivity
   pixelsForFullDrag?: number;
   // As Slider::textFromValueFunction, in place of the value and its unit
   valueText?: (param: ParamInfo, value: number) => string;
+  // As Slider::valueFromTextFunction, for typed text: null leaves the value as it is
+  parseText?: (param: ParamInfo, text: string) => number | null;
 }
 
 // A Slider::RotaryHorizontalVerticalDrag with its name below or above, which shows the value while it's being moved. Click the name to type a value.
@@ -94,8 +98,10 @@ export function LabeledSlider({
   labelClassName = '',
   namePlacement = 'below',
   nameHeight,
+  labelHeight,
   pixelsForFullDrag = PIXELS_FOR_FULL_DRAG,
   valueText,
+  parseText = parseValue,
 }: LabeledSliderProps) {
   const { value, set, commit, param } = useParam(backend, id);
   const drag = useRef<DragStart | null>(null);
@@ -106,7 +112,7 @@ export function LabeledSlider({
   const suffix = unit ?? param.unit;
   const text = valueText ? valueText(param, value) : suffix ? `${formatValue(param, value)} ${suffix}` : formatValue(param, value);
 
-  const layout = namePlacement === 'above' ? layOutBelowLabel(width, height) : layOutAboveLabel(width, height);
+  const layout = namePlacement === 'above' ? layOutBelowLabel(width, height, labelHeight) : layOutAboveLabel(width, height, labelHeight);
   const nameLabel = styleLabel(layout.label, nameHeight);
 
   useEffect(() => () => clearTimeout(nameTimer.current), []);
@@ -135,8 +141,9 @@ export function LabeledSlider({
 
   const commitText = (typed: string) => {
     setEditing(false);
-    const parsed = parseValue(param, typed);
-    if (parsed !== null) commit(parsed);
+    const parsed = parseText(param, typed);
+    // A plugin's own parser may answer outside the range or off the step
+    if (parsed !== null && !Number.isNaN(parsed)) commit(snap(param, parsed));
     flashValue();
   };
 
@@ -170,7 +177,7 @@ export function LabeledSlider({
         // As SliderAttachment's setDoubleClickReturnValue
         onDoubleClick={() => commit(param.defaultValue)}
       >
-        <Graphic width={layout.control.width} height={layout.control.height} proportion={proportion} value={value} />
+        <Graphic width={layout.control.width} height={layout.control.height} proportion={proportion} value={value} param={param} />
       </div>
       {editing ? (
         <input

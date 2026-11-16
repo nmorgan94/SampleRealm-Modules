@@ -24,3 +24,14 @@ test('the label goes right under a square control, the pair centred', () => {
     label: { left: 0, top: -1, width: 50, height: 24 },
   });
 });
+
+test("the label can be a height of the plugin's own, below or above", () => {
+  assert.deepEqual(layOutAboveLabel(72, 104, 16), {
+    control: { left: 0, top: 8, width: 72, height: 72 },
+    label: { left: 0, top: 80, width: 72, height: 16 },
+  });
+  assert.deepEqual(layOutBelowLabel(72, 104, 16), {
+    control: { left: 0, top: 16, width: 72, height: 88 },
+    label: { left: 0, top: 0, width: 72, height: 16 },
+  });
+});

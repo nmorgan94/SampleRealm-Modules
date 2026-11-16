@@ -7,10 +7,10 @@
 #include "ParameterSpec.h"
 
 //==============================================================================
-/** What the web editor needs to know about the plugin, as web/backend.ts's UiInfo. */
-inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> specs, const char* version, const char* commit)
+/** JSON text without juce::JSON, for a plugin's own info beside uiInfoJson. */
+namespace JsonText
 {
-    const auto quoted = [] (const char* text)
+    inline std::string quoted (const char* text)
     {
         std::string result = "\"";
 
@@ -23,25 +23,41 @@ inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> spec
         }
 
         return result + "\"";
-    };
+    }
 
-    // Not printf, which follows the host's locale
-    const auto number = [] (float value)
+    // Not printf, which follows the host's locale. Seven significant digits, as a float holds
+    inline std::string number (float value)
     {
-        const auto scaled = std::llround (static_cast<double> (value) * 10000.0);
-        const auto magnitude = std::llabs (scaled);
-        auto text = std::string (scaled < 0 ? "-" : "") + std::to_string (magnitude / 10000);
+        std::string::size_type decimals = 6;
+        long long scale = 1000000;
 
-        if (const auto fraction = magnitude % 10000; fraction != 0)
+        for (auto limit = 10.0f; std::abs (value) >= limit && decimals > 0; limit *= 10.0f)
+        {
+            --decimals;
+            scale /= 10;
+        }
+
+        const auto scaled = std::llround (static_cast<double> (value) * static_cast<double> (scale));
+        const auto magnitude = std::llabs (scaled);
+        auto text = std::string (scaled < 0 ? "-" : "") + std::to_string (magnitude / scale);
+
+        if (const auto fraction = magnitude % scale; fraction != 0)
         {
             auto digits = std::to_string (fraction);
-            digits.insert (0, 4 - digits.size(), '0');
+            digits.insert (0, decimals - digits.size(), '0');
             digits.erase (digits.find_last_not_of ('0') + 1);
             text += "." + digits;
         }
 
         return text;
-    };
+    }
+}
+
+//==============================================================================
+/** What the web editor needs to know about the plugin, as web/backend.ts's UiInfo. */
+inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> specs, const char* version, const char* commit)
+{
+    using JsonText::number, JsonText::quoted;
 
     const auto kindName = [] (ParameterSpecs::Kind kind)
     {
@@ -71,7 +87,7 @@ inline std::string uiInfoJson (std::span<const ParameterSpecs::Spec* const> spec
         json += ",\"kind\":" + quoted (kindName (spec.kind));
         json += ",\"min\":" + number (spec.min) + ",\"max\":" + number (spec.max);
         json += ",\"defaultValue\":" + number (spec.defaultValue);
-        json += ",\"step\":" + number (spec.step) + ",\"skew\":" + number (spec.skew);
+        json += ",\"step\":" + number (spec.step) + ",\"skew\":" + number (ParameterSpecs::skewOf (spec));
         json += ",\"unit\":" + quoted (spec.unit) + ",\"choices\":[" + choices + "]";
 
         // Only where true, so other plugins' params read as before

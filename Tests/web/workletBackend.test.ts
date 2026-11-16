@@ -202,3 +202,83 @@ test('a value shown for the engine notifies the editor but isn\'t sent back, and
   assert.deepEqual(posted, []);
   assert.equal(backend.presets.status().modified, false);
 });
+
+// A plugin whose presets are typed by a choice, and hold a curve beside the values
+const typed = (storage = memoryStorage()) => {
+  const voice: ParamInfo = { id: 'voice', name: 'Voice', kind: 'choice', min: 0, max: 1, defaultValue: 0, step: 1, skew: 1, unit: '', choices: ['Kick', 'Snare'] };
+  const typedPreset = (name: string, type: string, voiceIndex: number, curve: string) =>
+    `<PRESET name="${name}" category="" type="${type}"><PARAM id="voice" value="${voiceIndex}"/><PARAM id="gain" value="-6"/><CURVE points="${curve}"/></PRESET>`;
+
+  let curve = [0, 1];
+  const backend = workletBackend<{ curve: number[] }>({ ...info, params: [voice, ...info.params] }, {
+    storageKey: KEY,
+    storage,
+    factoryPresets: [typedPreset('Boom', 'Kick', 0, '0 4'), typedPreset('Crack', 'Snare', 1, '0 8'), typedPreset('Any', '', 0, '0 2')],
+    typeParameter: 'voice',
+    extraState: {
+      parse: (xml) => ({ curve: /points="([^"]*)"/.exec(xml)![1]!.split(' ').map(Number) }),
+      capture: () => ({ curve }),
+      apply: (state) => void (curve = state.curve ?? [0, 1]),
+    },
+  });
+
+  const names = async () => (await backend.presets.list()).map((entry) => entry.name);
+  return { backend, storage, names, curve: () => curve, setCurve: (next: number[]) => void (curve = next) };
+};
+
+test("only the current type's presets and those of none are listed, and stepping stays among them", async () => {
+  const { backend, names } = typed();
+  assert.deepEqual(await names(), ['Any', 'Boom']);
+
+  backend.setValue('voice', 1);
+  assert.deepEqual(await names(), ['Any', 'Crack']);
+
+  await backend.presets.loadPrevious();
+  assert.equal(backend.presets.status().current.name, 'Crack');
+  assert.equal(await backend.presets.load({ name: 'Boom', category: '', isFactory: true }), false);
+});
+
+test("a preset holds the plugin's extra state apart from its own fields, and Init keeps the type", async () => {
+  const { backend, storage, names, curve, setCurve } = typed();
+  backend.setValue('voice', 1);
+
+  await backend.presets.load({ name: 'Crack', category: '', isFactory: true });
+  assert.deepEqual(curve(), [0, 8]);
+  assert.equal(backend.getValue('gain'), -6);
+
+  setCurve([0, 3]);
+  backend.markModified();
+  assert.equal(backend.presets.status().modified, true);
+
+  assert.equal(await backend.presets.save('Mine', ''), null);
+  assert.deepEqual(JSON.parse(storage.items.get(KEY)!), [{ values: { voice: 1, gain: -6, tone: 5 }, type: 'Snare', extra: { curve: [0, 3] }, name: 'Mine', category: '' }]);
+
+  await backend.presets.loadInit();
+  assert.deepEqual(curve(), [0, 1]);
+  assert.equal(backend.getValue('voice'), 1);
+  assert.equal(backend.getValue('gain'), 0);
+  assert.deepEqual(await names(), ['Any', 'Crack', 'Mine']);
+
+  backend.setValue('voice', 0);
+  assert.deepEqual(await names(), ['Any', 'Boom']);
+});
+
+test("a plugin's own messages reach the worklet, those sent early once it attaches, and it hears what the worklet posts", () => {
+  const backend = workletBackend(info, { storageKey: KEY });
+  const heard: unknown[] = [];
+  const stop = backend.onMessage((data) => heard.push(data));
+  backend.post({ type: 'call', name: 'audition' });
+
+  const { port, posted } = fakePort();
+  backend.attach(port);
+  backend.post({ type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5], capacity: 1 } });
+  port.onmessage?.(new MessageEvent('message', { data: { type: 'watch', values: { hitCount: 1 } } }));
+  stop();
+  port.onmessage?.(new MessageEvent('message', { data: { type: 'watch', values: { hitCount: 2 } } }));
+
+  assert.deepEqual(posted, [
+    { type: 'call', name: 'audition' },
+    { type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5], capacity: 1 } },
+  ]);
+  assert.deepEqual(heard, [{ type: 'watch', values: { hitCount: 1 } }]);
+});

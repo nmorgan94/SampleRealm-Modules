@@ -76,23 +76,30 @@ public:
         label.setFont (juce::FontOptions (fontHeight, juce::Font::bold));
     }
 
+    /** The room the name takes under or over the knob: labelHeight unless set. */
+    void setLabelHeight (int newHeight)
+    {
+        heightOfLabel = newHeight;
+        resized();
+    }
+
     // Other labelled controls can use these to match and line up with this one
 
     static constexpr int labelHeight = 24;
     static constexpr float nameHeight = 16.0f;
 
-    static void styleLabel (juce::Label& labelBelow)
+    static void styleLabel (juce::Label& labelBelow, float fontHeight = nameHeight)
     {
-        labelBelow.setFont (juce::FontOptions (nameHeight, juce::Font::bold));
+        labelBelow.setFont (juce::FontOptions (fontHeight, juce::Font::bold));
         labelBelow.setJustificationType (juce::Justification::centred);
     }
 
     /** Puts the label right under a square control area, the pair centred, and returns that area. */
-    static juce::Rectangle<int> layOutAboveLabel (juce::Label& labelBelow, juce::Rectangle<int> bounds)
+    static juce::Rectangle<int> layOutAboveLabel (juce::Label& labelBelow, juce::Rectangle<int> bounds, int heightForLabel = labelHeight)
     {
-        const auto size = std::max (0, std::min (bounds.getWidth(), bounds.getHeight() - labelHeight));
-        bounds = bounds.withSizeKeepingCentre (bounds.getWidth(), size + labelHeight);
-        labelBelow.setBounds (bounds.removeFromBottom (labelHeight));
+        const auto size = std::max (0, std::min (bounds.getWidth(), bounds.getHeight() - heightForLabel));
+        bounds = bounds.withSizeKeepingCentre (bounds.getWidth(), size + heightForLabel);
+        labelBelow.setBounds (bounds.removeFromBottom (heightForLabel));
         return bounds.withSizeKeepingCentre (size, size);
     }
 
@@ -100,12 +107,12 @@ public:
     {
         if (placement == NamePlacement::below)
         {
-            slider.setBounds (layOutAboveLabel (label, getLocalBounds()));
+            slider.setBounds (layOutAboveLabel (label, getLocalBounds(), heightOfLabel));
             return;
         }
 
         auto bounds = getLocalBounds();
-        label.setBounds (bounds.removeFromTop (labelHeight));
+        label.setBounds (bounds.removeFromTop (heightOfLabel));
         slider.setBounds (bounds);
     }
 
@@ -115,6 +122,7 @@ private:
     juce::Slider slider;
     juce::Label label;
     NamePlacement placement = NamePlacement::below;
+    int heightOfLabel = labelHeight;
     bool dragging = false;
 
     void showName()             { label.setText (getName(), juce::dontSendNotification); }

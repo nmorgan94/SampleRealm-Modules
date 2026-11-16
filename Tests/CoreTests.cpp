@@ -57,6 +57,30 @@ TEST_CASE ("Integer and choice specs take whole steps, and a choice runs to its 
     CHECK_FALSE (areValid (std::array { &oneChoiceShort }));
 }
 
+TEST_CASE ("A centre lies inside a real spec's range, in place of a skew, and the web editor gets its skew", "[core][parameters]")
+{
+    using namespace ParameterSpecs;
+
+    constexpr auto tone = withCentre ({ "tone", "Tone", Kind::real, 200.0f, 16000.0f, 4000.0f }, 3000.0f);
+    constexpr auto atTheEdge = withCentre ({ "tone", "Tone", Kind::real, 200.0f, 16000.0f, 4000.0f }, 200.0f);
+    constexpr auto skewedToo = withCentre ({ "tone", "Tone", Kind::real, 200.0f, 16000.0f, 4000.0f, 0.0f, 0.3f }, 3000.0f);
+    constexpr auto wholeSteps = withCentre (integer ("voices", "Voices", 1, 8, 4), 2.0f);
+
+    CHECK (areValid (std::array { &tone }));
+    CHECK_FALSE (areValid (std::array { &atTheEdge }));
+    CHECK_FALSE (areValid (std::array { &skewedToo }));
+    CHECK_FALSE (areValid (std::array { &wholeSteps }));
+
+    // log (0.5) / log (60 / 72)
+    constexpr auto aboutZero = withCentre ({ "gain", "Gain", Kind::real, -60.0f, 12.0f, 0.0f }, 0.0f);
+    CHECK (areValid (std::array { &aboutZero }));
+    CHECK_THAT (skewOf (aboutZero), WithinAbs (3.8018, 0.0001));
+
+    // log (0.5) / log (2800 / 15800), to seven significant digits
+    CHECK (uiInfoJson (std::array { &tone }, "0.0.1", "unknown") == std::string (R"({"version":"0.0.1","commit":"unknown","build":")") + BuildType::name
+        + R"(","params":[{"id":"tone","name":"Tone","kind":"real","min":200,"max":16000,"defaultValue":4000,"step":0,"skew":0.400573,"unit":"","choices":[]}]})");
+}
+
 TEST_CASE ("A toggle is 0 or 1, automatable unless it says otherwise", "[core][parameters]")
 {
     using namespace ParameterSpecs;

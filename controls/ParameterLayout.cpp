@@ -48,7 +48,7 @@ namespace
             attributes = floatAttributesFor (spec, attributes);
 
         return std::make_unique<juce::AudioParameterFloat> (
-            id, spec.name, juce::NormalisableRange<float> (spec.min, spec.max, spec.step, spec.skew),
+            id, spec.name, juce::NormalisableRange<float> (spec.min, spec.max, spec.step, ParameterSpecs::skewOf (spec)),
             spec.defaultValue, attributes);
     }
 }

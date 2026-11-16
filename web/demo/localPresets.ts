@@ -56,16 +56,18 @@ interface Options<S> {
   // The factory preset files' text
   factory: string[];
   parse(xml: string): S;
-  // What Init loads
-  init: S;
+  // What Init loads, read at each load when it's a function
+  init: S | (() => S);
   capture(): S;
   // Anything missing from the state loads at its default, as in the APVTS
   apply(state: S): void;
+  // As PresetManager::Config::typeParameterId: only presets of the current type, or of none, are listed
+  type?: { current(): string; of(state: S): string | undefined };
 }
 
 type LocalPresets = PresetBackend & { markModified(): void };
 
-export function localPresets<S extends object>({ storageKey, storage, factory, parse, init, capture, apply }: Options<S>): LocalPresets {
+export function localPresets<S extends object>({ storageKey, storage, factory, parse, init, capture, apply, type }: Options<S>): LocalPresets {
   const factoryPresets = sorted(factory.map((xml) => parsePreset(xml, parse)));
   let users: StoredPreset<S>[] = [];
   let status: PresetStatus = { current: INIT, modified: false };
@@ -97,7 +99,17 @@ export function localPresets<S extends object>({ storageKey, storage, factory, p
     listeners.notify(status);
   };
 
-  const all = () => [...factoryPresets, ...users];
+  const all = () => {
+    const presets = [...factoryPresets, ...users];
+    if (!type) return presets;
+
+    const current = type.current();
+    return presets.filter((preset) => {
+      const presetType = type.of(preset);
+      return !presetType || presetType === current;
+    });
+  };
+
   const find = (preset: PresetEntry) => all().find((candidate) => isSamePreset(candidate, preset));
   const findUser = (name: string) => users.find((preset) => sameName(preset.name, name));
 
@@ -145,7 +157,7 @@ export function localPresets<S extends object>({ storageKey, storage, factory, p
       if (found) load(found);
       return found !== undefined;
     },
-    loadInit: async () => load({ ...init, ...INIT }),
+    loadInit: async () => load({ ...(typeof init === 'function' ? init() : init), ...INIT }),
     loadNext: () => step(1),
     loadPrevious: () => step(-1),
     exists: async (name) => {

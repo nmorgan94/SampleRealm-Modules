@@ -108,6 +108,19 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `WorkletBackend.showValue (id, value)` shows a value the engine set itself, from MIDI say, without sending it back.
 - `onEvent (name, listener)` in `pluginBackend.ts` hears what `Plugin::onTick` emits, and
   `initialData (name)` reads what `Plugin::withOptions` adds.
+- `withCentre (spec, value)` skews a real spec's range so that value sits half way, in place of `skew`; `skewOf (spec)` is the skew either way.
+- `HeaderBar` takes a `juce::Component&` in place of the title, and `HeaderBar.tsx` a function of the title's bounds, for a title of the plugin's own.
+- `LabeledSlider::setLabelHeight`, and `labelHeight` in `LabeledSlider.tsx`, set the room the name takes. `parseText` reads typed
+  text the plugin's way, and the `rotary` drawing is given the `param`.
+- `workletBackend`'s `typeParameter` types presets by a choice, as `PresetManager::Config::typeParameterId`, and `extraState` adds
+  state outside the parameters to them, stored as each preset's `extra`; `markModified()` reports an edit to it.
+- `WorkletBackend.post ({ type: 'call', name, args, floats: { at, values, capacity } })` calls an export of the plugin's own in the
+  worklet, writing the floats where the export `at` points first, up to `capacity` of them. `processorOptions.watch` names exports
+  to report: `onMessage` hears `{ type: 'watch', values }` when one changes, and after `post ({ type: 'watch' })`. A call or a
+  watched name the engine can't take comes back as `{ type: 'error', message }`.
+- A `parseText` answer is snapped to the parameter's range and step.
+- For info of the plugin's own beside `uiInfo`: `JsonText::quoted` and `JsonText::number` in `UiInfoJson.h` write it, and
+  `readJson (engine, pointer)` reads it. `loadEngine` also gives the compiled `module`, for an engine of the page's own.
 
 ### A plugin without activation
 

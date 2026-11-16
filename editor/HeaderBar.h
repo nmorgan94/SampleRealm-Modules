@@ -57,11 +57,17 @@ public:
     HeaderBar (const juce::String& boldTitle, const Layout&, PresetManager&, PromptOverlay&,
                std::function<void()> showManual, const juce::String& aboutText, juce::Component& meter);
 
+    /** A title of the plugin's own, given the header's height and Layout::titleWidth after the edge. Its
+        getTitle() is what screen readers read. As a function for `title` in web/editor/HeaderBar.tsx. */
+    HeaderBar (juce::Component& ownTitle, const Layout&, PresetManager&, PromptOverlay&,
+               std::function<void()> showManual, const juce::String& aboutText, juce::Component& meter);
+
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
     const Title title;
+    juce::Component* ownTitle = nullptr;
     const Layout layout;
     PromptOverlay& prompt;
     const std::function<void()> showManual;

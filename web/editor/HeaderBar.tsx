@@ -47,8 +47,8 @@ export interface HeaderTitle {
 }
 
 interface HeaderBarProps {
-  // All bold as a string
-  title: string | HeaderTitle;
+  // All bold as a string. A function draws a title of the plugin's own in the bounds it's given, its <h1> included
+  title: string | HeaderTitle | ((bounds: Rect) => ReactNode);
   width: number;
   layout: HeaderLayout;
   backend: { info: About; running: string; presets: PresetBackend };
@@ -61,7 +61,6 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
   const menu = useMenu();
   const boxes = layOut(width, layout);
   const actions = presetActions(backend.presets, prompt);
-  const { bold, regular } = typeof title === 'string' ? { bold: title, regular: '' } : title;
 
   const showMenu = async (button: HTMLElement) => {
     menu.open(button, [
@@ -75,12 +74,16 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
   return (
     <>
       <div className="absolute inset-x-0 top-0 bg-header" style={{ height: layout.height }} />
-      <h1
-        className="absolute flex items-center font-bold whitespace-nowrap text-title"
-        style={{ ...boxes.title, fontSize: juceHeight(layout.titleHeight) }}
-      >
-        <FittedText text={bold} regular={regular} width={layout.titleWidth} />
-      </h1>
+      {typeof title === 'function' ? (
+        title(boxes.title)
+      ) : (
+        <h1
+          className="absolute flex items-center font-bold whitespace-nowrap text-title"
+          style={{ ...boxes.title, fontSize: juceHeight(layout.titleHeight) }}
+        >
+          <FittedText {...(typeof title === 'string' ? { text: title } : { text: title.bold, regular: title.regular })} width={layout.titleWidth} />
+        </h1>
+      )}
       <PresetBar presets={backend.presets} actions={actions} bounds={boxes.presetBar} />
       <TextButton text="..." style={boxes.menu} onClick={(e) => void showMenu(e.currentTarget)} />
       {menu.element}

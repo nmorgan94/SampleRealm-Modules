@@ -18,7 +18,7 @@ type Processor = FakeWorkletProcessor & {
   process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean;
 };
 
-let EngineProcessor: new (options: { processorOptions: { wasm: unknown; channels: number } }) => Processor;
+let EngineProcessor: new (options: { processorOptions: { wasm: unknown; channels: number; watch?: string[] } }) => Processor;
 
 const realModule = WebAssembly.Module;
 const realInstance = WebAssembly.Instance;
@@ -212,4 +212,92 @@ test('the level is posted every eighth block, and silence only once', () => {
   run(8, 0);
   run(8, 0);
   assert.deepEqual(levels(), [{ type: 'level', peaks: [0.5, 0.25] }, { type: 'level', peaks: [0, 0] }]);
+});
+
+// A plugin's own exports: a hit counter, the last note, and a shape set from floats written at a pointer
+function pluginEngine() {
+  const { engine, calls } = fakeEngine();
+  const scratch = 8192;
+  let hits = 0;
+  let lastNote = 36;
+
+  const exports = {
+    ...engine,
+    midi: (_status: number, note: number) => {
+      hits++;
+      lastNote = note;
+    },
+    hitCount: () => hits,
+    lastNote: () => lastNote,
+    shapeNodes: () => scratch,
+    setShape: (index: number, count: number) => void calls.push(['setShape', index, ...new Float32Array(engine.memory.buffer, scratch, count)]),
+    audition: () => void calls.push(['audition']),
+  };
+
+  return { exports, calls };
+}
+
+test("a call reaches an export of the plugin's own, with its floats written first", () => {
+  const { exports, calls } = pluginEngine();
+  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2 } });
+  calls.length = 0;
+
+  send(processor, { type: 'call', name: 'audition' });
+  send(processor, { type: 'call', name: 'setShape', args: [1, 3], floats: { at: 'shapeNodes', values: [0, 0.5, -1], capacity: 3 } });
+
+  assert.deepEqual(calls, [['audition'], ['setShape', 1, 0, 0.5, -1]]);
+});
+
+test('a call the engine has no export for, or with more floats than fit, is reported and not made', () => {
+  const { exports, calls } = pluginEngine();
+  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2 } });
+  calls.length = 0;
+
+  send(processor, { type: 'call', name: 'missing' });
+  send(processor, { type: 'call', name: 'setShape', args: [1, 3], floats: { at: 'shapeNodes', values: [0, 0.5, -1], capacity: 2 } });
+  send(processor, { type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0] } });
+
+  assert.deepEqual(calls, []);
+  assert.deepEqual(processor.posted.slice(1), [
+    { type: 'error', message: 'Error: The engine has no export "missing"' },
+    { type: 'error', message: 'Error: "setShape" takes up to 2 floats, not 3' },
+    { type: 'error', message: `Error: "setShape" needs its floats' capacity` },
+  ]);
+});
+
+test("a watched name the engine has no export for tells the page why", () => {
+  const { exports } = pluginEngine();
+  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2, watch: ['hitCount', 'lastNotes'] } });
+
+  assert.deepEqual(processor.posted, [{ type: 'error', message: 'Error: The engine has no export "lastNotes"' }]);
+  assert.equal(processor.process([], [stereoOutput()]), false);
+});
+
+test('the page can ask for the watched values, which a processor that watches nothing ignores', () => {
+  const { exports } = pluginEngine();
+  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2, watch: ['hitCount', 'lastNote'] } });
+  send(processor, { type: 'watch' });
+  assert.deepEqual(processor.posted.at(-1), { type: 'watch', values: { hitCount: 0, lastNote: 36 } });
+
+  const { processor: plain } = start();
+  send(plain, { type: 'watch' });
+  assert.deepEqual(plain.posted, [{ type: 'ready' }]);
+});
+
+test('watched exports are posted together when one changes, and not while they stay the same', () => {
+  const { exports } = pluginEngine();
+  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2, watch: ['hitCount', 'lastNote'] } });
+  const watched = () => processor.posted.filter((message) => message.type === 'watch');
+
+  processor.process([], [stereoOutput()]);
+  assert.deepEqual(watched(), []);
+
+  send(processor, { type: 'midi', bytes: [0x90, 36, 100] });
+  processor.process([], [stereoOutput()]);
+  processor.process([], [stereoOutput()]);
+  assert.deepEqual(watched(), [{ type: 'watch', values: { hitCount: 1, lastNote: 36 } }]);
+
+  send(processor, { type: 'midi', bytes: [0x90, 48, 100] });
+  processor.process([], [stereoOutput()]);
+  assert.deepEqual(watched().at(-1), { type: 'watch', values: { hitCount: 2, lastNote: 48 } });
 });

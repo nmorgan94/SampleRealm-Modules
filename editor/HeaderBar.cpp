@@ -21,6 +21,15 @@ HeaderBar::HeaderBar (const juce::String& boldTitle, const Layout& l, PresetMana
 {
 }
 
+HeaderBar::HeaderBar (juce::Component& titleToShow, const Layout& l, PresetManager& presets, PromptOverlay& o,
+                      std::function<void()> m, const juce::String& about, juce::Component& meterToShow)
+    : HeaderBar (Title{}, l, presets, o, std::move (m), about, meterToShow)
+{
+    ownTitle = &titleToShow;
+    setTitle (ownTitle->getTitle());
+    addAndMakeVisible (*ownTitle);
+}
+
 juce::Font HeaderBar::titleFont() const
 {
     return EditorFonts::of (*this, layout.titleHeight, true);
@@ -71,7 +80,7 @@ void HeaderBar::paint (juce::Graphics& g)
 
     // The meter's repaints reach here too
     const auto titleArea = getLocalBounds().withTrimmedLeft (layout.edge).withWidth (layout.titleWidth);
-    if (! g.clipRegionIntersects (titleArea))
+    if (ownTitle != nullptr || ! g.clipRegionIntersects (titleArea))
         return;
 
     // Painted, so the colour comes from the LookAndFeel
@@ -105,6 +114,9 @@ void HeaderBar::resized()
 {
     auto bounds = getLocalBounds().reduced (layout.edge, 0);
     meter.setBounds (bounds.removeFromRight (layout.meterWidth).reduced (0, layout.meterInset));
+
+    if (ownTitle != nullptr)
+        ownTitle->setBounds (bounds.withWidth (layout.titleWidth));
 
     auto controls = bounds.withTrimmedLeft (layout.titleWidth + layout.gap).withTrimmedRight (layout.gap);
     controls = controls.withSizeKeepingCentre (controls.getWidth(), layout.controlsHeight);

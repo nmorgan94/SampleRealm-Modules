@@ -11,17 +11,22 @@ export function instantiateEngine(module: WebAssembly.Module) {
   return engine;
 }
 
-export const readUiInfo = (engine: Engine) => {
-  const bytes = new Uint8Array(engine.memory.buffer, engine.uiInfo());
-  return JSON.parse(new TextDecoder().decode(bytes.subarray(0, bytes.indexOf(0)))) as UiInfo;
+// The JSON text an export points at, such as a plugin's own info
+export const readJson = <Read>(engine: Engine, pointer: number) => {
+  const bytes = new Uint8Array(engine.memory.buffer, pointer);
+  return JSON.parse(new TextDecoder().decode(bytes.subarray(0, bytes.indexOf(0)))) as Read;
 };
 
-export async function loadEngine(url: string): Promise<{ wasm: ArrayBuffer; info: UiInfo }> {
+export const readUiInfo = (engine: Engine) => readJson<UiInfo>(engine, engine.uiInfo());
+
+// `module` is the compiled wasm, for a page that wants an engine of its own: instantiateEngine(module)
+export async function loadEngine(url: string): Promise<{ wasm: ArrayBuffer; info: UiInfo; module: WebAssembly.Module }> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
 
   const wasm = await response.arrayBuffer();
-  return { wasm, info: readUiInfo(instantiateEngine(await WebAssembly.compile(wasm))) };
+  const module = await WebAssembly.compile(wasm);
+  return { wasm, info: readUiInfo(instantiateEngine(module)), module };
 }
 
 // processorUrl is processor.js. Resolves once the processor has built its engine

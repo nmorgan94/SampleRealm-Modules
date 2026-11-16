@@ -132,3 +132,24 @@ TEST_CASE ("A real parameter can take value text of the plugin's own, and the re
     auto& voicesParameter = *apvts.getParameter ("voices");
     CHECK (voicesParameter.getText (voicesParameter.getValue(), 100) == "4");
 }
+
+TEST_CASE ("A spec with a centre has that value half way along its range, as setSkewForCentre", "[parameters]")
+{
+    static constexpr auto tone = ParameterSpecs::withCentre ({ "tone", "Tone", ParameterSpecs::Kind::real, 200.0f, 16000.0f, 4000.0f }, 3000.0f);
+    static constexpr std::array toneSpecs { &tone };
+
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    StubPlugin::SilentProcessor host;
+    juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (toneSpecs, 1) };
+
+    juce::NormalisableRange<float> expected { 200.0f, 16000.0f };
+    expected.setSkewForCentre (3000.0f);
+
+    auto& toneParameter = *apvts.getParameter ("tone");
+    CHECK (juce::exactlyEqual (toneParameter.getNormalisableRange().skew, expected.skew));
+    CHECK_THAT (toneParameter.convertFrom0to1 (0.5f), WithinAbs (3000.0, 1.0e-2));
+
+    // The web editor is told the same skew
+    CHECK (juce::exactlyEqual (ParameterSpecs::skewOf (tone), expected.skew));
+    CHECK (juce::exactlyEqual (ParameterSpecs::skewOf (level), 2.0f));
+}

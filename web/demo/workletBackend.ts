@@ -7,6 +7,9 @@ export type EnginePort = Pick<MessagePort, 'postMessage'> & { onmessage: ((e: Me
 // A plugin's Source/shared/Transport.h
 export type Transport = { bpm: number; playing: boolean; ppq: number };
 
+// What processor.js posts
+export type EngineMessage = { type: string; [key: string]: unknown };
+
 export type WorkletBackend = PluginBackend & {
   attach(port: EnginePort): void;
   // The page plays the host
@@ -18,6 +21,12 @@ export type WorkletBackend = PluginBackend & {
   noteOff(note: number): void;
   // Shows a value the engine set itself, from MIDI say, without sending it back
   showValue(id: string, value: number): void;
+  // An edit to state outside the parameters, as PresetManager hears nonParameterStateChanged
+  markModified(): void;
+  // A message of the plugin's own to processor.js, such as its 'call'. Kept until the worklet attaches
+  post(message: unknown): void;
+  // Everything processor.js posts, its 'watch' included. Returns how to stop listening
+  onMessage(listener: (data: EngineMessage) => void): () => void;
 };
 
 const NOTE_ON = 0x90;
@@ -27,27 +36,42 @@ const FIRST_SYSTEM_STATUS = 0xf0;
 
 const dataByte = (value: number) => Math.min(127, Math.max(0, Math.round(value)));
 
-// A preset holds parameter values by id
-interface PresetState {
+// A preset holds parameter values by id, its type where the plugin's presets are typed, and the plugin's extra state
+interface PresetState<Extra = {}> {
   values: Record<string, number>;
+  type?: string;
+  extra?: Partial<Extra>;
 }
 
 export const parseState = (xml: string): PresetState => ({
   values: Object.fromEntries(xmlTags(xml, 'PARAM').map(({ id, value }) => [id, value ? Number(value) : NaN])),
+  type: xmlTags(xml, 'PRESET')[0]?.type,
 });
 
-interface Options {
+interface Options<Extra> {
   // The plugin's own, as a site's demos share its storage
   storageKey: string;
   // The factory preset files' text
   factoryPresets?: string[];
   // The page's own unless given
   storage?: PresetStorage;
+  // As PresetManager::Config::typeParameterId: a choice whose value's name types each preset. Init keeps it
+  typeParameter?: string;
+  // State outside the parameters that presets hold too, stored as the preset's `extra`. Init applies {}
+  extraState?: {
+    parse(xml: string): Extra;
+    capture(): Extra;
+    apply(state: Partial<Extra>): void;
+  };
 }
 
-export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], storage = browserStorage() }: Options): WorkletBackend {
+export function workletBackend<Extra extends object = {}>(
+  info: UiInfo,
+  { storageKey, factoryPresets = [], storage = browserStorage(), typeParameter, extraState }: Options<Extra>
+): WorkletBackend {
   const entry = paramLookup(new Map(info.params.map((param, index) => [param.id, { param, index, value: param.defaultValue, listeners: listenerSet<[number]>() }])));
   const levelListeners = listenerSet<[Level]>();
+  const messageListeners = listenerSet<[EngineMessage]>();
   let port: EnginePort | null = null;
   // Sent once the worklet attaches
   let pending: unknown[] = [];
@@ -74,22 +98,31 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     post({ type: 'midi', bytes: [status, dataByte(bytes[1] ?? 0), dataByte(bytes[2] ?? 0)] });
   };
 
-  const presets = localPresets<PresetState>({
+  // The type parameter's entry, where presets are typed
+  const typed = typeParameter === undefined ? undefined : entry(typeParameter);
+  const currentType = () => typed && (typed.param.choices[Math.round(typed.value)] ?? '');
+
+  const presets = localPresets<PresetState<Extra>>({
     storageKey,
     storage,
     factory: factoryPresets,
-    parse: parseState,
-    init: { values: {} },
+    parse: (xml) => ({ ...parseState(xml), extra: extraState?.parse(xml) }),
+    init: () => ({ values: typed ? { [typed.param.id]: typed.value } : {} }),
     // As PresetManager::Config::ignoredParameterIds: a performance control isn't saved, so a load resets it
     capture: () => ({
       values: Object.fromEntries(info.params.filter(({ isPerformanceControl }) => !isPerformanceControl).map(({ id }) => [id, entry(id).value])),
+      type: currentType(),
+      extra: extraState?.capture(),
     }),
     // Ids this engine doesn't have are skipped, as the APVTS skips them. A value that isn't a number loads as the default
-    apply: ({ values = {} }) =>
+    apply: ({ values = {}, extra = {} }) => {
       info.params.forEach(({ id, defaultValue }) => {
         const value = values[id];
         apply(id, typeof value === 'number' && Number.isFinite(value) ? value : defaultValue);
-      }),
+      });
+      extraState?.apply(extra);
+    },
+    type: typed && { current: () => currentType() ?? '', of: (state) => state.type },
   });
 
   return {
@@ -111,10 +144,14 @@ export function workletBackend(info: UiInfo, { storageKey, factoryPresets = [], 
     noteOn: (note, velocity = 100) => midi([NOTE_ON, note, velocity]),
     noteOff: (note) => midi([NOTE_OFF, note, 0]),
     showValue,
+    markModified: presets.markModified,
+    post,
+    onMessage: messageListeners.add,
     attach: (enginePort) => {
       port = enginePort;
       port.onmessage = ({ data }) => {
         if (data.type === 'level') levelListeners.notify({ peaks: data.peaks });
+        messageListeners.notify(data);
       };
       pending.forEach((message) => enginePort.postMessage(message));
       pending = [];

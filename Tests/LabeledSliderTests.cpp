@@ -107,6 +107,26 @@ TEST_CASE ("A labelled slider's name can go above, with the knob taking the room
     CHECK (label.getFont().isBold());
 }
 
+TEST_CASE ("A labelled slider's label can be a height of the plugin's own, below or above", "[editor]")
+{
+    // The same cases as Tests/web/layout.test.ts
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+
+    LabeledSlider control;
+    control.setSize (72, 104);
+    control.setLabelHeight (16);
+
+    auto& label = *descendantsOf<juce::Label> (control).front();
+
+    CHECK (control.getSlider().getBounds() == juce::Rectangle<int> (0, 8, 72, 72));
+    CHECK (label.getBounds() == juce::Rectangle<int> (0, 80, 72, 16));
+
+    control.setNamePlacement (LabeledSlider::NamePlacement::above);
+
+    CHECK (label.getBounds() == juce::Rectangle<int> (0, 0, 72, 16));
+    CHECK (control.getSlider().getBounds() == juce::Rectangle<int> (0, 16, 72, 88));
+}
+
 TEST_CASE ("A labelled slider shows the slider's own text for a value", "[editor]")
 {
     juce::ScopedJuceInitialiser_GUI juceInitialiser;

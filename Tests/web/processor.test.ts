@@ -243,26 +243,20 @@ test("a call reaches an export of the plugin's own, with its floats written firs
   calls.length = 0;
 
   send(processor, { type: 'call', name: 'audition' });
-  send(processor, { type: 'call', name: 'setShape', args: [1, 3], floats: { at: 'shapeNodes', values: [0, 0.5, -1], capacity: 3 } });
+  send(processor, { type: 'call', name: 'setShape', args: [1, 3], floats: { at: 'shapeNodes', values: [0, 0.5, -1] } });
 
   assert.deepEqual(calls, [['audition'], ['setShape', 1, 0, 0.5, -1]]);
 });
 
-test('a call the engine has no export for, or with more floats than fit, is reported and not made', () => {
+test('a call the engine has no export for is reported and not made', () => {
   const { exports, calls } = pluginEngine();
   const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2 } });
   calls.length = 0;
 
   send(processor, { type: 'call', name: 'missing' });
-  send(processor, { type: 'call', name: 'setShape', args: [1, 3], floats: { at: 'shapeNodes', values: [0, 0.5, -1], capacity: 2 } });
-  send(processor, { type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0] } });
 
   assert.deepEqual(calls, []);
-  assert.deepEqual(processor.posted.slice(1), [
-    { type: 'error', message: 'Error: The engine has no export "missing"' },
-    { type: 'error', message: 'Error: "setShape" takes up to 2 floats, not 3' },
-    { type: 'error', message: `Error: "setShape" needs its floats' capacity` },
-  ]);
+  assert.deepEqual(processor.posted.slice(1), [{ type: 'error', message: 'Error: The engine has no export "missing"' }]);
 });
 
 test("a watched name the engine has no export for tells the page why", () => {
@@ -271,17 +265,6 @@ test("a watched name the engine has no export for tells the page why", () => {
 
   assert.deepEqual(processor.posted, [{ type: 'error', message: 'Error: The engine has no export "lastNotes"' }]);
   assert.equal(processor.process([], [stereoOutput()]), false);
-});
-
-test('the page can ask for the watched values, which a processor that watches nothing ignores', () => {
-  const { exports } = pluginEngine();
-  const processor = new EngineProcessor({ processorOptions: { wasm: exports, channels: 2, watch: ['hitCount', 'lastNote'] } });
-  send(processor, { type: 'watch' });
-  assert.deepEqual(processor.posted.at(-1), { type: 'watch', values: { hitCount: 0, lastNote: 36 } });
-
-  const { processor: plain } = start();
-  send(plain, { type: 'watch' });
-  assert.deepEqual(plain.posted, [{ type: 'ready' }]);
 });
 
 test('watched exports are posted together when one changes, and not while they stay the same', () => {

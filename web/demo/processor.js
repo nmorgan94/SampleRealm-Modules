@@ -32,8 +32,6 @@ class EngineProcessor extends AudioWorkletProcessor {
       else if (data.type === 'transport') this.engine.setTransport?.(data.bpm, data.playing, data.ppq);
       else if (data.type === 'midi') this.engine.midi?.(data.bytes[0], data.bytes[1], data.bytes[2]);
       else if (data.type === 'call') this.call(data);
-      // The page asks for what it missed before it listened
-      else if (data.type === 'watch') this.postWatched();
     };
 
     this.port.postMessage({ type: 'ready' });
@@ -49,18 +47,11 @@ class EngineProcessor extends AudioWorkletProcessor {
     return found;
   }
 
-  // An export of the plugin's own: { name, args, floats: { at, values, capacity } }. The floats are written where the export `at`
-  // points first, and refused when there are more than `capacity` of them
+  // An export of the plugin's own: { name, args, floats: { at, values } }. The floats are written where the export `at` points first
   call({ name, args = [], floats }) {
     try {
       const called = this.exportNamed(name);
-
-      if (floats) {
-        if (typeof floats.capacity !== 'number') throw new Error(`"${name}" needs its floats' capacity`);
-        if (floats.values.length > floats.capacity) throw new Error(`"${name}" takes up to ${floats.capacity} floats, not ${floats.values.length}`);
-        new Float32Array(this.engine.memory.buffer, this.exportNamed(floats.at)(), floats.values.length).set(floats.values);
-      }
-
+      if (floats) new Float32Array(this.engine.memory.buffer, this.exportNamed(floats.at)(), floats.values.length).set(floats.values);
       called(...args);
     } catch (error) {
       this.postError(error);
@@ -68,7 +59,6 @@ class EngineProcessor extends AudioWorkletProcessor {
   }
 
   postWatched() {
-    if (this.watch.length === 0) return;
     this.port.postMessage({ type: 'watch', values: Object.fromEntries(this.watch.map((name, index) => [name, this.watched[index]])) });
   }
 

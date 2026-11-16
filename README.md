@@ -114,9 +114,9 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
   text the plugin's way, and the `rotary` drawing is given the `param`.
 - `workletBackend`'s `typeParameter` types presets by a choice, as `PresetManager::Config::typeParameterId`, and `extraState` adds
   state outside the parameters to them, stored as each preset's `extra`; `markModified()` reports an edit to it.
-- `WorkletBackend.post ({ type: 'call', name, args, floats: { at, values, capacity } })` calls an export of the plugin's own in the
-  worklet, writing the floats where the export `at` points first, up to `capacity` of them. `processorOptions.watch` names exports
-  to report: `onMessage` hears `{ type: 'watch', values }` when one changes, and after `post ({ type: 'watch' })`. A call or a
+- `WorkletBackend.post ({ type: 'call', name, args, floats: { at, values } })` calls an export of the plugin's own in the
+  worklet, writing the floats where the export `at` points first. `processorOptions.watch` names exports
+  to report: `onMessage` hears `{ type: 'watch', values }` when one changes. A call or a
   watched name the engine can't take comes back as `{ type: 'error', message }`.
 - A `parseText` answer is snapped to the parameter's range and step.
 - For info of the plugin's own beside `uiInfo`: `JsonText::quoted` and `JsonText::number` in `UiInfoJson.h` write it, and

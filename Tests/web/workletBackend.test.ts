@@ -271,14 +271,14 @@ test("a plugin's own messages reach the worklet, those sent early once it attach
 
   const { port, posted } = fakePort();
   backend.attach(port);
-  backend.post({ type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5], capacity: 1 } });
+  backend.post({ type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5] } });
   port.onmessage?.(new MessageEvent('message', { data: { type: 'watch', values: { hitCount: 1 } } }));
   stop();
   port.onmessage?.(new MessageEvent('message', { data: { type: 'watch', values: { hitCount: 2 } } }));
 
   assert.deepEqual(posted, [
     { type: 'call', name: 'audition' },
-    { type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5], capacity: 1 } },
+    { type: 'call', name: 'setShape', args: [1, 1], floats: { at: 'shapeNodes', values: [0.5] } },
   ]);
   assert.deepEqual(heard, [{ type: 'watch', values: { hitCount: 1 } }]);
 });

@@ -22,4 +22,9 @@
  #include <activation/activation.h>
 #endif
 
+// Only a plugin with add_plugin_updates has it
+#if JUCE_MODULE_AVAILABLE_updates
+ #include <updates/updates.h>
+#endif
+
 #include "WebViewEditor.h"

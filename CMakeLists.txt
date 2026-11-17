@@ -47,6 +47,12 @@ add_plugin_core(ModulesTests)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Activation.cmake)
 add_plugin_activation(ModulesTests)
 
+# A made-up page, so the generated one is the same in every shell
+set(ENV{UPDATE_URL} "https://example.com/plugins/example")
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Updates.cmake)
+add_plugin_updates(ModulesTests)
+
 # Tests/plugin comes with licensing::fixtures
 file(GLOB TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
 

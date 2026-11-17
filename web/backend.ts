@@ -77,6 +77,22 @@ export interface ActivationBackend {
   importFile(): Promise<string | null>;
 }
 
+export interface UpdateStatus {
+  // "v0.0.2 available", or empty when there is nothing newer
+  notice: string;
+  // The user's switch
+  checking: boolean;
+}
+
+// Mirrors updates/UpdateActions.h
+export interface UpdateBackend {
+  status(): UpdateStatus;
+  onStatus(listener: (status: UpdateStatus) => void): () => void;
+  // The plugin's page, in the browser
+  openPage(): void;
+  setChecking(checking: boolean): void;
+}
+
 export const isSamePreset = (a: PresetEntry, b: PresetEntry) => a.name === b.name && a.isFactory === b.isFactory;
 
 // What every editor has. A plugin with the header's presets and meter has a PluginBackend
@@ -86,6 +102,8 @@ export interface EditorBackend {
   running: string;
   // Only in a plugin built to require activation
   activation?: ActivationBackend;
+  // Only in a plugin built to ask the website for its latest version
+  updates?: UpdateBackend;
   param(id: string): ParamInfo;
   // Real values, not 0..1
   getValue(id: string): number;

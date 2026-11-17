@@ -14,6 +14,7 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs none of the modules below |
 | `editor/` | JUCE module: header bar, presets, overlays, About, on top of `controls/`. No licensing |
 | `activation/` | JUCE module: the activation bar, on `editor/` and `licensing/` |
+| `updates/` | JUCE module: asks the website for the plugin's latest version, and the menu items that tell the user. Needs none of the modules above |
 | `webview_editor/` | JUCE module: `WebViewEditor`, the native side of `web/plugin/pluginBackend.ts` |
 
 ### CMake
@@ -27,6 +28,7 @@ Each file starts with how to call it.
 | `cmake/Controls.cmake` | `add_plugin_controls(<plugin target>)`: `<controls/controls.h>` |
 | `cmake/Editor.cmake` | `add_plugin_editor(<plugin target>)`: `<editor/editor.h>`, with controls |
 | `cmake/Activation.cmake` | `add_plugin_activation(<plugin target>)`: `<activation/activation.h>`, with the editor and licensing |
+| `cmake/Updates.cmake` | `add_plugin_updates(<plugin target>)`: `<updates/updates.h>` |
 | `cmake/WebUi.cmake` | `add_webview_ui(<plugin target>)`: `webui/` built into the plugin, and `<webview_editor/webview_editor.h>` |
 | `cmake/WasmDemo.cmake` | `add_wasm_demo(SOURCES ...)`: the web demo's engine and page |
 | `cmake/Tests.cmake` | `add_unit_tests(<plugin target>)`: the plugin's `Tests/` with Catch2 and CTest |
@@ -74,7 +76,7 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - The plugin's `cmake/Modules.cmake` reads that line and sets `SampleRealm-Modules_SOURCE_DIR`.
 - To try a change before pushing, make the line `"file:../../SampleRealm-Modules"` and run
   `npm install` in the plugin's `webui/`.
-- `LICENCE_KEYS` and `ACTIVATION_URL` are the plugin's environment variables. This repo holds neither.
+- `LICENCE_KEYS`, `ACTIVATION_URL` and `UPDATE_URL` are the plugin's environment variables. This repo holds none of them.
 - Tailwind needs `@source '<path to node_modules>/@samplerealm/modules/web';` in the demo's
   stylesheet and `.../web/editor` in the plugin's.
 - A plugin's web tests run as `node --import @samplerealm/modules/testing/typescript.mjs --test ...`,
@@ -135,6 +137,22 @@ It has no licensing code: it calls `add_plugin_editor` or `add_plugin_controls`,
 and leaves out `PLUGIN_REQUIRE_ACTIVATION`, `Plugin::activation` and the activation bar. Its WebView page
 is told the bar never shows. A plugin with activation calls `add_plugin_activation` and includes
 `<activation/activation.h>`.
+
+### Update notices
+
+The contract is the website's `docs/update-check.md`. The plugin only tells the user: it downloads nothing.
+
+- `UPDATE_URL` is the plugin's page, as `https://example.com/plugins/example`. Unset, the plugin never asks and shows nothing.
+  It is remembered between configures until it is taken out of the plugin's `.env`.
+- The processor owns one `updates::UpdateCheck`, made on first use. It asks `<UPDATE_URL>/version` at most once a
+  day, on a background thread, and keeps what it heard in `<COMPANY_NAME>/<PRODUCT_NAME>.updates`.
+- An editor makes an `UpdateActions` as it opens, which starts the check that is due: never the processor, as hosts
+  load plugins to scan them.
+- A process's instances share what they know, so one asks for all of them and each shows the same switch.
+- `Tests/PluginTestHelpers.h` calls `UpdateCheck::ignoreUpdateUrl()`, so a plugin's tests never ask the website.
+- Native: `header.setOwnMenuItems` adds `UpdateActions::addMenuItems`, and `UpdateActions::onChange` sets
+  `header.setMenuMarked (actions.notice().isNotEmpty())`.
+- WebView: `WebViewEditor::Plugin::updates`. `HeaderBar.tsx` takes the backend's `updates`. The demo has none.
 
 ### What the plugin supplies to the editor
 

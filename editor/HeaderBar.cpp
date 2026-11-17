@@ -110,6 +110,31 @@ void HeaderBar::paint (juce::Graphics& g)
     text.draw (g, titleArea.toFloat().withWidth (static_cast<float> (layout.titleWidth) / squeeze));
 }
 
+void HeaderBar::setOwnMenuItems (std::function<void (juce::PopupMenu&)> addItems)
+{
+    addOwnMenuItems = std::move (addItems);
+}
+
+void HeaderBar::setMenuMarked (bool shouldMark)
+{
+    if (menuMarked == shouldMark)
+        return;
+
+    menuMarked = shouldMark;
+    repaint (menuButton.getBounds());
+}
+
+void HeaderBar::paintOverChildren (juce::Graphics& g)
+{
+    if (! menuMarked)
+        return;
+
+    const auto corner = menuButton.getBounds().toFloat().getTopRight();
+
+    g.setColour (findColour (titleColourId));
+    g.fillEllipse (juce::Rectangle<float> (menuMarkSize, menuMarkSize).withCentre (corner.translated (-menuMarkSize, menuMarkSize)));
+}
+
 void HeaderBar::resized()
 {
     auto bounds = getLocalBounds().reduced (layout.edge, 0);
@@ -133,6 +158,9 @@ void HeaderBar::showMenu()
     menu.addSeparator();
     menu.addItem ("Manual", showManual);
     menu.addItem ("About", [this] { prompt.showMessage ("About", aboutText); });
+
+    if (addOwnMenuItems != nullptr)
+        addOwnMenuItems (menu);
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton));
 }

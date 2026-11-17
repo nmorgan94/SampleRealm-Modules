@@ -31,6 +31,11 @@ public:
         licensing::Activation* activation = nullptr;
        #endif
 
+       #if JUCE_MODULE_AVAILABLE_updates
+        // Null in a plugin that doesn't ask the website for its latest version
+        updates::UpdateCheck* updates = nullptr;
+       #endif
+
         int width;
         int height;
 
@@ -85,6 +90,16 @@ private:
     std::vector<std::unique_ptr<juce::WebSliderRelay>> relays;
     std::unique_ptr<juce::WebBrowserComponent> browser;
     std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> attachments;
+
+   #if JUCE_MODULE_AVAILABLE_updates
+    juce::WebBrowserComponent::Options withUpdateFunctions (const juce::WebBrowserComponent::Options&);
+    juce::var updateStatus() const;
+
+    std::unique_ptr<UpdateActions> updateActions;
+
+    // Held while the page is hidden, which would miss it
+    bool updateStatusUnsent = false;
+   #endif
 
     juce::uint32 lastPresetChange = 0;
     int ticksSinceUpdate = 0;

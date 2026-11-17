@@ -62,7 +62,17 @@ public:
     HeaderBar (juce::Component& ownTitle, const Layout&, PresetManager&, PromptOverlay&,
                std::function<void()> showManual, const juce::String& aboutText, juce::Component& meter);
 
+    /** The plugin's own items, added under About each time the menu opens. */
+    void setOwnMenuItems (std::function<void (juce::PopupMenu&)> addItems);
+
+    /** A dot on the menu button, for news in the menu. As `menuMarked` in web/editor/HeaderBar.tsx. */
+    void setMenuMarked (bool shouldMark);
+    bool isMenuMarked() const   { return menuMarked; }
+
+    static constexpr int menuMarkSize = 5;
+
     void paint (juce::Graphics&) override;
+    void paintOverChildren (juce::Graphics&) override;
     void resized() override;
 
 private:
@@ -72,6 +82,8 @@ private:
     PromptOverlay& prompt;
     const std::function<void()> showManual;
     const juce::String aboutText;
+    std::function<void (juce::PopupMenu&)> addOwnMenuItems;
+    bool menuMarked = false;
 
     PresetActions presetActions;
     PresetBar presetBar;

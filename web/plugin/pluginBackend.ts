@@ -1,10 +1,10 @@
 // The C++ side of these names is webview_editor/WebViewEditor.cpp
 import { getNativeFunction, getSliderState } from '@juce-framework/webview';
-import { listenerSet, paramLookup, type ActivationBackend, type ActivationStatus, type EditorBackend, type Level, type PluginBackend, type PresetBackend, type PresetEntry, type PresetStatus, type UiInfo } from '../backend.ts';
+import { listenerSet, paramLookup, type ActivationBackend, type ActivationStatus, type EditorBackend, type Level, type PluginBackend, type PresetBackend, type PresetEntry, type PresetStatus, type UiInfo, type UpdateBackend, type UpdateStatus } from '../backend.ts';
 import { toProportion } from '../editor/params.ts';
 
-// JUCE's type lists only its own initialisation data. presetStatus is there when the plugin has presets
-type InitialisationData = { uiInfo: string[]; presetStatus?: string[]; activationStatus: string[]; running: string[] };
+// JUCE's type lists only its own initialisation data. presetStatus is there when the plugin has presets, updateStatus when it checks for updates
+type InitialisationData = { uiInfo: string[]; presetStatus?: string[]; activationStatus: string[]; updateStatus?: string[]; running: string[] };
 
 function pluginActivation(initial: ActivationStatus): ActivationBackend {
   let status = initial;
@@ -32,6 +32,29 @@ function pluginActivation(initial: ActivationStatus): ActivationBackend {
     openBrowser: () => void call('activationOpenBrowser'),
     paste: () => message(call('activationPaste')),
     importFile: () => message(call('activationImport')),
+  };
+}
+
+function pluginUpdates(initial: UpdateStatus): UpdateBackend {
+  let status = initial;
+  const listeners = listenerSet<[UpdateStatus]>();
+
+  const update = (payload: unknown) => {
+    status = payload as UpdateStatus;
+    listeners.notify(status);
+  };
+
+  const call = (name: string, ...args: unknown[]) => getNativeFunction(name)(...args);
+
+  // Asked again once listening, in case the check finished first
+  window.__JUCE__.backend.addEventListener('updateStatus', update);
+  call('updateStatus').then(update);
+
+  return {
+    status: () => status,
+    onStatus: listeners.add,
+    openPage: () => void call('updateOpenPage'),
+    setChecking: (checking) => void call('updateSetChecking', checking),
   };
 }
 
@@ -84,7 +107,7 @@ export const onLevel = (listener: (level: Level) => void) => onEvent('level', li
 
 // For a plugin whose WebViewEditor was given no presets
 export function editorBackend(data = initialisationData()): EditorBackend {
-  const { uiInfo, activationStatus, running } = data;
+  const { uiInfo, activationStatus, updateStatus, running } = data;
   const activation = JSON.parse(activationStatus[0]) as ActivationStatus;
   const info = JSON.parse(uiInfo[0]) as UiInfo;
   // A slider state for every kind, as WebViewEditor's relays
@@ -98,6 +121,7 @@ export function editorBackend(data = initialisationData()): EditorBackend {
     running: running[0],
     // Its functions exist only where the bar could show
     activation: activation.show ? pluginActivation(activation) : undefined,
+    updates: updateStatus ? pluginUpdates(JSON.parse(updateStatus[0]) as UpdateStatus) : undefined,
     param,
     getValue: (id) => slider(id).getScaledValue(),
     setValue: (id, value) => slider(id).setNormalisedValue(toProportion(param(id), value)),

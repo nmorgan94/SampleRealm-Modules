@@ -1,7 +1,7 @@
 // Mirrors editor/HeaderBar.cpp
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { aboutText, type About } from './about.ts';
-import type { PresetBackend } from '../backend.ts';
+import type { PresetBackend, UpdateBackend } from '../backend.ts';
 import { FittedText, TextButton } from './controls.tsx';
 import { juceHeight } from './fonts.ts';
 import { centred, type Rect } from './layout.ts';
@@ -9,6 +9,7 @@ import { useMenu } from './Menu.tsx';
 import { presetActions } from './presetActions.ts';
 import { PresetBar } from './PresetBar.tsx';
 import type { Prompt } from './PromptOverlay.tsx';
+import { updateMenuItems } from './updateActions.ts';
 
 // HeaderBar::Layout, which each plugin sets
 export interface HeaderLayout {
@@ -40,6 +41,17 @@ const layOut = (width: number, layout: HeaderLayout) => {
   };
 };
 
+// HeaderBar::menuMarkSize
+const MENU_MARK_SIZE = 5;
+
+// HeaderBar::paintOverChildren: centred its own size in from the button's top right corner
+const menuMark = (menu: Rect): Rect => ({
+  left: menu.left + menu.width - 1.5 * MENU_MARK_SIZE,
+  top: menu.top + 0.5 * MENU_MARK_SIZE,
+  width: MENU_MARK_SIZE,
+  height: MENU_MARK_SIZE,
+});
+
 // HeaderBar::Title: bold, then a part in the regular weight
 export interface HeaderTitle {
   bold: string;
@@ -51,7 +63,8 @@ interface HeaderBarProps {
   title: string | HeaderTitle | ((bounds: Rect) => ReactNode);
   width: number;
   layout: HeaderLayout;
-  backend: { info: About; running: string; presets: PresetBackend };
+  // With `updates`, the menu has their items, and its button a dot while there is a notice: HeaderBar::setMenuMarked
+  backend: { info: About; running: string; presets: PresetBackend; updates?: UpdateBackend };
   prompt: Prompt;
   showManual(): void;
   meter(bounds: Rect): ReactNode;
@@ -61,6 +74,13 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
   const menu = useMenu();
   const boxes = layOut(width, layout);
   const actions = presetActions(backend.presets, prompt);
+  const { updates } = backend;
+  const [menuMarked, setMenuMarked] = useState(() => !!updates?.status().notice);
+
+  useEffect(() => {
+    setMenuMarked(!!updates?.status().notice);
+    return updates?.onStatus((status) => setMenuMarked(!!status.notice));
+  }, [updates]);
 
   const showMenu = async (button: HTMLElement) => {
     menu.open(button, [
@@ -68,6 +88,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
       { kind: 'separator' },
       { kind: 'item', label: 'Manual', onSelect: showManual },
       { kind: 'item', label: 'About', onSelect: () => prompt.showMessage('About', aboutText(backend.info, backend.running)) },
+      ...updateMenuItems(updates),
     ]);
   };
 
@@ -86,6 +107,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
       )}
       <PresetBar presets={backend.presets} actions={actions} bounds={boxes.presetBar} />
       <TextButton text="..." style={boxes.menu} onClick={(e) => void showMenu(e.currentTarget)} />
+      {menuMarked && <div className="pointer-events-none absolute rounded-full bg-title" style={menuMark(boxes.menu)} />}
       {menu.element}
       {meter(boxes.meter)}
     </>

@@ -98,6 +98,15 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
     }
    #endif
 
+   #if JUCE_MODULE_AVAILABLE_updates
+    // Starts the check that is due
+    if (plugin.updates != nullptr && plugin.updates->isConfigured())
+    {
+        updateActions = std::make_unique<UpdateActions> (*plugin.updates);
+        updateActions->onChange = [this] { updateStatusUnsent = true; };
+    }
+   #endif
+
     browser = std::make_unique<SinglePageBrowser> (createOptions());
     hideMacWebViewBackground (*browser);
 
@@ -151,6 +160,10 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
 
    #if JUCE_MODULE_AVAILABLE_activation
     options = withActivationFunctions (options);
+   #endif
+
+   #if JUCE_MODULE_AVAILABLE_updates
+    options = withUpdateFunctions (options);
    #endif
 
     if (plugin.withOptions != nullptr)
@@ -313,6 +326,44 @@ void WebViewEditor::checkActivation()
 }
 #endif
 
+#if JUCE_MODULE_AVAILABLE_updates
+juce::var WebViewEditor::updateStatus() const
+{
+    auto status = std::make_unique<juce::DynamicObject>();
+    status->setProperty ("notice", updateActions->notice());
+    status->setProperty ("checking", updateActions->isChecking());
+
+    return juce::var (status.release());
+}
+
+// The page has these, and updateStatus to start with, only in a plugin that checks
+juce::WebBrowserComponent::Options WebViewEditor::withUpdateFunctions (const juce::WebBrowserComponent::Options& options)
+{
+    using Args = juce::Array<juce::var>;
+    using Completion = juce::WebBrowserComponent::NativeFunctionCompletion;
+
+    if (updateActions == nullptr)
+        return options;
+
+    return options
+        .withInitialisationData ("updateStatus", juce::JSON::toString (updateStatus(), true))
+        .withNativeFunction ("updateStatus", [this] (const Args&, Completion complete)
+        {
+            complete (updateStatus());
+        })
+        .withNativeFunction ("updateOpenPage", [this] (const Args&, Completion complete)
+        {
+            updateActions->openPage();
+            complete ({});
+        })
+        .withNativeFunction ("updateSetChecking", [this] (const Args& args, Completion complete)
+        {
+            updateActions->setChecking (args[0]);
+            complete ({});
+        });
+}
+#endif
+
 std::optional<juce::WebBrowserComponent::Resource> WebViewEditor::getResource (const juce::String& url)
 {
     const auto path = url == "/" ? juce::String ("index.html") : url.fromFirstOccurrenceOf ("/", false, false);
@@ -362,6 +413,14 @@ void WebViewEditor::timerCallback()
             browser->emitEventIfBrowserIsVisible ("presetStatus", presetStatus (*plugin.presets));
         }
     }
+
+   #if JUCE_MODULE_AVAILABLE_updates
+    if (updateStatusUnsent && browser->isShowing())
+    {
+        updateStatusUnsent = false;
+        browser->emitEventIfBrowserIsVisible ("updateStatus", updateStatus());
+    }
+   #endif
 
    #if JUCE_MODULE_AVAILABLE_activation
     checkActivation();

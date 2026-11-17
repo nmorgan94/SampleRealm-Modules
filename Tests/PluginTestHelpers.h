@@ -3,12 +3,21 @@
 #include <catch2/catch_test_macros.hpp>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#if JUCE_MODULE_AVAILABLE_updates
+ #include <updates/updates.h>
+#endif
+
 //==============================================================================
 /** For a plugin's own tests. Its processor gives its parameters as getAPVTS(). */
 namespace TestHelpers
 {
     constexpr double sampleRate = 48000.0;
     constexpr int blockSize = 512;
+
+   #if JUCE_MODULE_AVAILABLE_updates
+    // A plugin's tests never ask the website
+    inline const bool updateUrlIgnored = (updates::UpdateCheck::ignoreUpdateUrl(), true);
+   #endif
 
     // Sets a parameter in its real units (e.g. dB) the way a host would
     template <typename Processor>

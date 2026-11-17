@@ -18,7 +18,9 @@ type Processor = FakeWorkletProcessor & {
   process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean;
 };
 
-let EngineProcessor: new (options: { processorOptions: { wasm: unknown; channels: number; watch?: string[] } }) => Processor;
+type Frames = { name: string; size: string; perSecond?: number };
+
+let EngineProcessor: new (options: { processorOptions: { wasm: unknown; channels: number; watch?: string[]; frames?: Frames } }) => Processor;
 
 const realModule = WebAssembly.Module;
 const realInstance = WebAssembly.Instance;
@@ -283,4 +285,54 @@ test('watched exports are posted together when one changes, and not while they s
   send(processor, { type: 'midi', bytes: [0x90, 48, 100] });
   processor.process([], [stereoOutput()]);
   assert.deepEqual(watched().at(-1), { type: 'watch', values: { hitCount: 2, lastNote: 48 } });
+});
+
+// A plugin's own frame: the seconds it was asked for, then two floats of its own
+function frameEngine() {
+  const { engine } = fakeEngine();
+  const scratch = 8192;
+
+  return {
+    ...engine,
+    meterFrame: (seconds: number) => {
+      new Float32Array(engine.memory.buffer, scratch, 3).set([seconds, 0.5, -1]);
+      return scratch;
+    },
+    meterFrameSize: () => 3,
+  };
+}
+
+test("a plugin's frame is posted so many times a second, asked for with the time since the last", () => {
+  const frames = { name: 'meterFrame', size: 'meterFrameSize', perSecond: 60 };
+  const processor = new EngineProcessor({ processorOptions: { wasm: frameEngine(), channels: 2, frames } });
+  const posted = () => processor.posted.filter((message) => message.type === 'frame');
+  const run = (blocks: number) => {
+    for (let count = 0; count < blocks; count++) processor.process([], [stereoOutput()]);
+  };
+
+  // 48 kHz in blocks of 128 is 375 blocks a second: every sixth is nearest to 60 a second
+  run(5);
+  assert.deepEqual(posted(), []);
+
+  run(6);
+  assert.deepEqual(posted(), [{ type: 'frame', frame: Float32Array.of((6 * FRAMES) / SAMPLE_RATE, 0.5, -1) }]);
+});
+
+test('a frame the engine has no export for tells the page why', () => {
+  const frames = { name: 'meterFrame', size: 'missing', perSecond: 60 };
+  const processor = new EngineProcessor({ processorOptions: { wasm: frameEngine(), channels: 2, frames } });
+
+  assert.deepEqual(processor.posted, [{ type: 'error', message: 'Error: The engine has no export "missing"' }]);
+});
+
+test('a frame with no size, or no times a second, tells the page why', () => {
+  const errorsFrom = (wasm: unknown, perSecond?: number) => {
+    const frames = { name: 'meterFrame', size: 'meterFrameSize', perSecond };
+    return new EngineProcessor({ processorOptions: { wasm, channels: 2, frames } }).posted;
+  };
+
+  assert.deepEqual(errorsFrom({ ...frameEngine(), meterFrameSize: () => 0 }, 60), [
+    { type: 'error', message: 'Error: The engine\'s "meterFrameSize" gave a frame of 0 floats' },
+  ]);
+  assert.deepEqual(errorsFrom(frameEngine()), [{ type: 'error', message: "Error: A frame can't be posted undefined times a second" }]);
 });

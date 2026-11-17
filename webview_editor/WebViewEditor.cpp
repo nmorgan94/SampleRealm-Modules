@@ -121,7 +121,17 @@ WebViewEditor::WebViewEditor (juce::AudioProcessor& pluginProcessor, const Plugi
 
     jassert (plugin.width > 0 && plugin.height > 0);
     setSize (plugin.width, plugin.height);
-    startTimerHz (updateHz);
+
+    // After the size: setting the limits on an editor with none would report the smallest
+    if (plugin.resizeLimits.has_value())
+    {
+        setResizable (true, true);
+        setResizeLimits (plugin.resizeLimits->minWidth, plugin.resizeLimits->minHeight,
+                         plugin.resizeLimits->maxWidth, plugin.resizeLimits->maxHeight);
+    }
+
+    jassert (plugin.tickHz >= updateHz && plugin.tickHz % updateHz == 0);
+    startTimerHz (ticksPerUpdate * updateHz);
 }
 
 juce::WebBrowserComponent::Options WebViewEditor::createOptions()
@@ -320,6 +330,18 @@ std::optional<juce::WebBrowserComponent::Resource> WebViewEditor::getResource (c
 
 void WebViewEditor::timerCallback()
 {
+    if (plugin.onTick != nullptr && browser->isShowing())
+        plugin.onTick ([this] (const juce::Identifier& name, const juce::var& payload)
+        {
+            browser->emitEventIfBrowserIsVisible (name, payload);
+        });
+
+    // The rest runs updateHz times a second
+    if (++ticksSinceUpdate < ticksPerUpdate)
+        return;
+
+    ticksSinceUpdate = 0;
+
     if (plugin.meter != nullptr)
     {
         juce::Array<juce::var> peaks;
@@ -341,12 +363,6 @@ void WebViewEditor::timerCallback()
         }
     }
 
-    if (plugin.onTick != nullptr && browser->isShowing())
-        plugin.onTick ([this] (const juce::Identifier& name, const juce::var& payload)
-        {
-            browser->emitEventIfBrowserIsVisible (name, payload);
-        });
-
    #if JUCE_MODULE_AVAILABLE_activation
     checkActivation();
    #endif
@@ -360,4 +376,7 @@ void WebViewEditor::paint (juce::Graphics& g)
 void WebViewEditor::resized()
 {
     browser->setBounds (getLocalBounds());
+
+    if (plugin.onResized != nullptr)
+        plugin.onResized (getWidth(), getHeight());
 }

@@ -269,6 +269,19 @@ TEST_CASE_METHOD (PresetFixture, "Rescanning moves the change counter only when 
     CHECK (presets.getChangeCounter() != before);
 }
 
+TEST_CASE_METHOD (PresetFixture, "Presets are found by name and kind", "[presets]")
+{
+    REQUIRE (presets.saveUserPreset ("Mine", {}).wasOk());
+
+    const auto mine = presets.find ("Mine", false);
+    REQUIRE (mine.has_value());
+
+    CHECK (presets.find ("Boost +3", true).has_value());
+    CHECK (mine->file == userDirectory.getChildFile ("Mine.srtest"));
+    CHECK_FALSE (presets.find ("Boost +3", false).has_value());
+    CHECK_FALSE (presets.find ("Mine", true).has_value());
+}
+
 TEST_CASE_METHOD (PresetFixture, "State from before presets existed shows Init, modified", "[presets][state]")
 {
     REQUIRE (presets.loadPreset (presets.find ("Boost +6", true).value()));

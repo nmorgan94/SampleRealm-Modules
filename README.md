@@ -118,6 +118,13 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
   worklet, writing the floats where the export `at` points first. `processorOptions.watch` names exports
   to report: `onMessage` hears `{ type: 'watch', values }` when one changes. A call or a
   watched name the engine can't take comes back as `{ type: 'error', message }`.
+  `processorOptions.frames = { name, size, perSecond }` posts `{ type: 'frame', frame }` about that often: the floats the
+  export `name` points at, given the seconds since its last call, as many as the export `size` says.
+- `Plugin::tickHz` calls `onTick` faster than the meter's 30 a second, `Plugin::resizeLimits` makes the WebView editor
+  resizable, opening at `width` and `height`, and `Plugin::onResized` hears its size.
+- `Transport::available` is false where there's no host transport, as in the Standalone. `Transport::hostPlaying` is the
+  host's own flag, for a plugin that doesn't need the position. A wasm engine's `setTransport` sets both itself.
+- `TextButton` in `controls.tsx` takes a `label` for screen readers, as `Component::setTitle`.
 - A `parseText` answer is snapped to the parameter's range and step.
 - For info of the plugin's own beside `uiInfo`: `JsonText::quoted` and `JsonText::number` in `UiInfoJson.h` write it, and
   `readJson (engine, pointer)` reads it. `loadEngine` also gives the compiled `module`, for an engine of the page's own.

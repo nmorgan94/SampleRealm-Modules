@@ -39,7 +39,8 @@ namespace
 // Beside Transport, where Catch2 looks for it
 static bool operator== (const Transport& a, const Transport& b)
 {
-    return juce::exactlyEqual (a.bpm, b.bpm) && a.playing == b.playing && juce::exactlyEqual (a.ppq, b.ppq);
+    return juce::exactlyEqual (a.bpm, b.bpm) && a.playing == b.playing && juce::exactlyEqual (a.ppq, b.ppq)
+        && a.available == b.available && a.hostPlaying == b.hostPlaying;
 }
 
 //==============================================================================
@@ -229,17 +230,17 @@ TEST_CASE ("The transport takes the host's tempo and position, or defaults", "[c
     position.setPpqPosition (8.5);
     host.position = position;
 
-    CHECK (Transport::from (&host) == Transport { 128.0, true, 8.5 });
+    CHECK (Transport::from (&host) == Transport { 128.0, true, 8.5, true, true });
 
     // The Standalone has no play head. Hosts may give no position, or leave out the tempo and the beat
     CHECK (Transport::from (nullptr) == Transport {});
     host.position = juce::nullopt;
     CHECK (Transport::from (&host) == Transport {});
     host.position = juce::AudioPlayHead::PositionInfo {};
-    CHECK (Transport::from (&host) == Transport {});
+    CHECK (Transport::from (&host) == Transport { 174.0, false, 0.0, true });
 }
 
-TEST_CASE ("A host playing with no position counts as stopped", "[core][transport]")
+TEST_CASE ("A host playing with no position counts as stopped, though its own flag says playing", "[core][transport]")
 {
     FakePlayHead host;
     juce::AudioPlayHead::PositionInfo position;
@@ -247,7 +248,19 @@ TEST_CASE ("A host playing with no position counts as stopped", "[core][transpor
     position.setIsPlaying (true);
     host.position = position;
 
-    CHECK (Transport::from (&host) == Transport { 90.0, false, 0.0 });
+    CHECK (Transport::from (&host) == Transport { 90.0, false, 0.0, true, true });
+}
+
+TEST_CASE ("The transport is available only where a host gives a position", "[core][transport]")
+{
+    FakePlayHead host;
+    host.position = juce::AudioPlayHead::PositionInfo {};
+    CHECK (Transport::from (&host).available);
+
+    // As in the Standalone
+    host.position = juce::nullopt;
+    CHECK_FALSE (Transport::from (&host).available);
+    CHECK_FALSE (Transport::from (nullptr).available);
 }
 
 TEST_CASE ("The transport moves on only while playing", "[core][transport]")

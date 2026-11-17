@@ -34,16 +34,19 @@ export function FittedText({ text, regular = '', width, centred = false }: { tex
 interface TextButtonProps {
   text: string;
   style: CSSProperties;
+  // For screen readers, where the text alone doesn't say what the button is for: as Component::setTitle
+  label?: string;
   onClick(e: ReactMouseEvent<HTMLButtonElement>): void;
 }
 
 // LookAndFeel_V4::drawButtonBackground lightens by 5% on hover and 20% while down
-export function TextButton({ text, style, onClick }: TextButtonProps) {
+export function TextButton({ text, style, label, onClick }: TextButtonProps) {
   return (
     <button
       type="button"
       className="absolute cursor-pointer overflow-hidden rounded-md border border-line bg-widget px-1 text-ellipsis whitespace-nowrap text-[color:var(--color-button-text,var(--color-fg))] hover:bg-[color-mix(in_srgb,var(--color-widget),white_5%)] active:bg-[color-mix(in_srgb,var(--color-widget),white_20%)]"
       style={{ fontSize: juceHeight(12), ...style }}
+      aria-label={label}
       onClick={onClick}
     >
       {text}

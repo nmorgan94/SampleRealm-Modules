@@ -7,6 +7,8 @@
 #endif
 
 #include "../StubPlugin.h"
+#include <samplerealm/BuildCommit.h>
+#include <samplerealm/BuildType.h>
 
 //==============================================================================
 TEST_CASE ("The header and presets work in a plugin with no licensing", "[editor]")
@@ -44,4 +46,17 @@ TEST_CASE ("A plugin's own title takes the title's place in the header", "[edito
     CHECK (header.getTitle() == "Two lines");
     CHECK (ownTitle.getParentComponent() == &header);
     CHECK (ownTitle.getBounds() == juce::Rectangle<int> (12, 0, 128, 44));
+}
+
+TEST_CASE ("About shows the version and build type, the commit, where it runs, and the UI", "[editor]")
+{
+    StubPlugin::Processor processor;
+    const auto lines = juce::StringArray::fromLines (About::text (processor));
+
+    REQUIRE (lines.size() == 5);
+    CHECK (lines[0] == "Version " JucePlugin_VersionString);
+    CHECK (lines[1] == juce::String (BuildType::name) + " build");
+    CHECK (lines[2] == juce::String ("Commit ") + buildCommit);
+    CHECK (lines[3] == "Undefined");
+    CHECK (lines[4] == "Native UI");
 }

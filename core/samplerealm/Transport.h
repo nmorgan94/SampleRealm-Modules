@@ -9,6 +9,8 @@ struct Transport
     double bpm = 174.0;
     bool playing = false;
     double ppq = 0.0; // the position in beats
+    bool available = false; // false where there's no host transport, as in the Standalone
+    bool hostPlaying = false; // the host's own flag, with or without a position
 
     static Transport from (juce::AudioPlayHead* playHead)
     {
@@ -19,6 +21,8 @@ struct Transport
 
         if (const auto position = playHead->getPosition())
         {
+            transport.available = true;
+            transport.hostPlaying = position->getIsPlaying();
             transport.bpm = position->getBpm().orFallback (transport.bpm);
 
             // Playing with no position counts as stopped

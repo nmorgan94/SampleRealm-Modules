@@ -1,8 +1,10 @@
 const LEVEL_EVERY_BLOCKS = 8;
 
 class EngineProcessor extends AudioWorkletProcessor {
-  // `watch` names exports of the plugin's own, taking nothing: when one's value changes after a block, all are posted as 'watch'
-  constructor({ processorOptions: { wasm, channels, watch = [] } }) {
+  // `watch` names exports of the plugin's own, taking nothing: when one's value changes after a block, all are posted as 'watch'.
+  // `frames` is { name, size, perSecond }: the export `name` takes the seconds since its last call and points at
+  // as many floats as the export `size` gives, posted as 'frame' about `perSecond` times a second
+  constructor({ processorOptions: { wasm, channels, watch = [], frames } }) {
     super();
 
     try {
@@ -15,6 +17,16 @@ class EngineProcessor extends AudioWorkletProcessor {
       this.watch = watch;
       this.watchedExports = watch.map((name) => this.exportNamed(name));
       this.watched = this.watchedExports.map((watchedExport) => watchedExport());
+
+      if (frames) {
+        this.frameExport = this.exportNamed(frames.name);
+        this.frameSize = this.exportNamed(frames.size)();
+        if (!(this.frameSize > 0)) throw new Error(`The engine's "${frames.size}" gave a frame of ${this.frameSize} floats`);
+        if (!(frames.perSecond > 0)) throw new Error(`A frame can't be posted ${frames.perSecond} times a second`);
+        // A block is 128 samples at any sample rate
+        this.blocksPerFrame = Math.max(1, Math.round(sampleRate / (frames.perSecond * 128)));
+        this.blocksSinceFrame = 0;
+      }
     } catch (error) {
       this.engine = null;
       this.postError(error);
@@ -98,6 +110,14 @@ class EngineProcessor extends AudioWorkletProcessor {
     }
 
     if (hasChanged) this.postWatched();
+
+    if (this.frameExport && ++this.blocksSinceFrame >= this.blocksPerFrame) {
+      const pointer = this.frameExport((this.blocksSinceFrame * frames) / sampleRate);
+      this.blocksSinceFrame = 0;
+      // A copy, handed over rather than cloned
+      const frame = new Float32Array(this.engine.memory.buffer, pointer, this.frameSize).slice();
+      this.port.postMessage({ type: 'frame', frame }, [frame.buffer]);
+    }
 
     // An engine without a meter has no peak
     if (this.engine.peak && ++this.blocks % LEVEL_EVERY_BLOCKS === 0) {

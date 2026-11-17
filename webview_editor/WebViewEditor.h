@@ -11,6 +11,12 @@ public:
     /** Sends the page an event. Only for use inside the onTick call it's passed to. */
     using EmitEvent = std::function<void (const juce::Identifier& name, const juce::var& payload)>;
 
+    /** The sizes an editor can be dragged between. */
+    struct ResizeLimits
+    {
+        int minWidth, minHeight, maxWidth, maxHeight;
+    };
+
     struct Plugin
     {
         std::span<const ParameterSpecs::Spec* const> specs;
@@ -32,11 +38,20 @@ public:
         juce::Colour background = juce::LookAndFeel_V4::getDarkColourScheme()
                                       .getUIColour (juce::LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
 
-        // Called updateHz times a second while the page is showing, for the plugin's own events
+        // Called tickHz times a second while the page is showing, for the plugin's own events
         std::function<void (const EmitEvent&)> onTick = nullptr;
 
         // Adds the plugin's own native functions and initialisation data
         std::function<juce::WebBrowserComponent::Options (juce::WebBrowserComponent::Options)> withOptions = nullptr;
+
+        // A multiple of updateHz, for a plugin that draws faster than the meter. The level and the rest stay at updateHz
+        int tickHz = updateHz;
+
+        // For an editor the user can resize: width and height are then the size it opens at
+        std::optional<ResizeLimits> resizeLimits = std::nullopt;
+
+        // Called with the editor's size whenever it changes, for a plugin that keeps it
+        std::function<void (int width, int height)> onResized = nullptr;
     };
 
     WebViewEditor (juce::AudioProcessor&, const Plugin&);
@@ -54,6 +69,9 @@ private:
 
     Plugin plugin;
 
+    // A tickHz that isn't a multiple of updateHz runs at the multiple below it
+    const int ticksPerUpdate = juce::jmax (1, plugin.tickHz / updateHz);
+
    #if JUCE_MODULE_AVAILABLE_activation
     juce::WebBrowserComponent::Options withActivationFunctions (const juce::WebBrowserComponent::Options&);
     void checkActivation();
@@ -69,6 +87,7 @@ private:
     std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> attachments;
 
     juce::uint32 lastPresetChange = 0;
+    int ticksSinceUpdate = 0;
 
     juce::MemoryInputStream uiZipStream;
     juce::ZipFile uiZip { uiZipStream };

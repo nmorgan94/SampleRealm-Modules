@@ -24,6 +24,7 @@ export function webuiConfig<VitePlugin>(options: WebuiConfigOptions<VitePlugin>)
   base: string;
   plugins: (VitePlugin | LocalEnginePlugin)[];
   resolve: { dedupe: string[] };
+  optimizeDeps: { exclude: string[] };
   server: { port: number; fs: { allow: string[] } };
   build: {
     outDir: string;

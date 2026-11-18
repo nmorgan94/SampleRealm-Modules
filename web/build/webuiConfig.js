@@ -26,6 +26,8 @@ export function webuiConfig({ mode, webuiDir, plugins, enginePath }) {
     plugins: [...plugins, localEngine(enginePath)],
     // A linked @samplerealm/modules has its own React installed
     resolve: { dedupe: ['react', 'react-dom'] },
+    // Pre-bundled, the dev server loads a second copy of the editor's root context and menus don't open
+    optimizeDeps: { exclude: ['@samplerealm/modules'] },
     server: { port: 8099, fs: { allow: [resolve(webuiDir, '..')] } },
     build: {
       outDir: resolve(webuiDir, 'dist', mode),

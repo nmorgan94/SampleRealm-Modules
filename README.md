@@ -119,7 +119,7 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
 - `WorkletBackend.post ({ type: 'call', name, args, floats: { at, values } })` calls an export of the plugin's own in the
   worklet, writing the floats where the export `at` points first. `processorOptions.watch` names exports
   to report: `onMessage` hears `{ type: 'watch', values }` when one changes. A call or a
-  watched name the engine can't take comes back as `{ type: 'error', message }`.
+  watched name the engine can't take comes back as `{ type: 'error', message }`, which the backend logs.
   `processorOptions.frames = { name, size, perSecond }` posts `{ type: 'frame', frame }` about that often: the floats the
   export `name` points at, given the seconds since its last call, as many as the export `size` says.
 - `Plugin::tickHz` calls `onTick` faster than the meter's 30 a second, `Plugin::resizeLimits` makes the WebView editor

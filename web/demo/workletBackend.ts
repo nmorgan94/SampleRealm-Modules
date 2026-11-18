@@ -151,6 +151,8 @@ export function workletBackend<Extra extends object = {}>(
       port = enginePort;
       port.onmessage = ({ data }) => {
         if (data.type === 'level') levelListeners.notify({ peaks: data.peaks });
+        // A call or watched name the engine couldn't take: nothing else shows it
+        else if (data.type === 'error') console.error('The demo engine:', data.message);
         messageListeners.notify(data);
       };
       pending.forEach((message) => enginePort.postMessage(message));

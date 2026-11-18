@@ -282,3 +282,18 @@ test("a plugin's own messages reach the worklet, those sent early once it attach
   ]);
   assert.deepEqual(heard, [{ type: 'watch', values: { hitCount: 1 } }]);
 });
+
+test("an error the worklet posts is logged, and the plugin's listeners hear it too", (t) => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const backend = workletBackend(info, { storageKey: KEY });
+  const heard: unknown[] = [];
+  backend.onMessage((data) => heard.push(data));
+
+  const { port } = fakePort();
+  backend.attach(port);
+  const error = { type: 'error', message: 'Error: The engine has no export "setShape"' };
+  port.onmessage?.(new MessageEvent('message', { data: error }));
+
+  assert.deepEqual(logged.mock.calls.map((call) => call.arguments), [['The demo engine:', error.message]]);
+  assert.deepEqual(heard, [error]);
+});

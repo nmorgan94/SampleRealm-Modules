@@ -1,5 +1,41 @@
 namespace
 {
+    // As AudioParameterFloat counts them from its interval
+    int decimalPlacesFor (float step)
+    {
+        int places = 7;
+
+        if (juce::approximatelyEqual (step, 0.0f))
+            return places;
+
+        if (juce::approximatelyEqual (std::abs (step - std::floor (step)), 0.0f))
+            return 0;
+
+        auto scaled = std::abs (juce::roundToInt (step * std::pow (10, places)));
+
+        while (scaled % 10 == 0 && places > 0)
+        {
+            --places;
+            scaled /= 10;
+        }
+
+        return places;
+    }
+
+    // AudioParameterFloat's own text, but a value that rounds to zero has no minus
+    std::function<juce::String (float, int)> textWithDecimalPlaces (int places)
+    {
+        return [places] (float value, int length)
+        {
+            auto text = juce::String (value, places);
+
+            if (text.containsOnly ("-0."))
+                text = text.trimCharactersAtStart ("-");
+
+            return length > 0 ? text.substring (0, length) : text;
+        };
+    }
+
     std::unique_ptr<juce::RangedAudioParameter> makeParameter (const ParameterSpecs::Spec& spec, int versionHint,
                                                                const FloatAttributesFor& floatAttributesFor)
     {
@@ -46,6 +82,9 @@ namespace
 
         if (floatAttributesFor != nullptr)
             attributes = floatAttributesFor (spec, attributes);
+
+        if (attributes.getStringFromValueFunction() == nullptr)
+            attributes = attributes.withStringFromValueFunction (textWithDecimalPlaces (decimalPlacesFor (spec.step)));
 
         return std::make_unique<juce::AudioParameterFloat> (
             id, spec.name, juce::NormalisableRange<float> (spec.min, spec.max, spec.step, ParameterSpecs::skewOf (spec)),

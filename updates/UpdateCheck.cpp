@@ -249,7 +249,7 @@ namespace updates
         {
             // One byte over is enough for it to be ignored
             juce::MemoryBlock body;
-            stream.readIntoMemoryBlock (body, static_cast<ssize_t> (largestReplyBytes) + 1);
+            stream.readIntoMemoryBlock (body, largestReplyBytes + 1);
             reply = body.toString();
         }
 

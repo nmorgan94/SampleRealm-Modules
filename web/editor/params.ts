@@ -52,7 +52,9 @@ export const formatValue = (param: ParamInfo, value: number) => {
   // juce::AudioParameterBool's default text
   if (param.kind === 'toggle') return value >= 0.5 ? 'On' : 'Off';
 
-  return value.toFixed(decimalPlaces(param.step));
+  const text = value.toFixed(decimalPlaces(param.step));
+  // As the plugin: a value that rounds to zero has no minus
+  return /^-[0.]+$/.test(text) ? text.slice(1) : text;
 };
 
 // A choice's name, in any case, before a number: '1/4' is a name, not 1

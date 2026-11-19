@@ -133,6 +133,26 @@ TEST_CASE ("A real parameter can take value text of the plugin's own, and the re
     CHECK (voicesParameter.getText (voicesParameter.getValue(), 100) == "4");
 }
 
+TEST_CASE ("A real parameter's text has its step's decimal places, and no minus on a value that rounds to zero", "[parameters]")
+{
+    static constexpr ParameterSpecs::Spec offset { "offset", "Offset", ParameterSpecs::Kind::real, -0.25f, 0.25f, 0.0f };
+    static constexpr std::array textSpecs { &level, &offset };
+
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    StubPlugin::SilentProcessor host;
+    juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (textSpecs, 1) };
+
+    auto& levelParameter = *apvts.getParameter ("level");
+    CHECK (levelParameter.getText (levelParameter.convertTo0to1 (-12.0f), 100) == "-12.0");
+    CHECK (levelParameter.getText (levelParameter.convertTo0to1 (-12.0f), 3) == "-12");
+
+    auto& offsetParameter = *apvts.getParameter ("offset");
+    // Reads about -0.000000015
+    const auto justBelowHalf = std::nextafter (0.5f, 0.0f);
+    CHECK (offsetParameter.convertFrom0to1 (justBelowHalf) < 0.0f);
+    CHECK (offsetParameter.getText (justBelowHalf, 100) == "0.0000000");
+}
+
 TEST_CASE ("A spec with a centre has that value half way along its range, as setSkewForCentre", "[parameters]")
 {
     static constexpr auto tone = ParameterSpecs::withCentre ({ "tone", "Tone", ParameterSpecs::Kind::real, 200.0f, 16000.0f, 4000.0f }, 3000.0f);

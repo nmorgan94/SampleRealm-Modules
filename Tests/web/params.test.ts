@@ -76,6 +76,13 @@ test('a step gives the decimal places of its text', () => {
   assert.deepEqual([0.001, 0.1, 0.01, 1].map((step) => formatValue({ ...gain, step }, 1)), ['1.000', '1.0', '1.00', '1']);
 });
 
+test('a value that rounds to zero reads without a minus, as in the plugin', () => {
+  assert.equal(formatValue(gain, -0.04), '0.0');
+  assert.equal(formatValue({ ...gain, step: 1 }, -0.4), '0');
+  assert.equal(formatValue(gain, -0.06), '-0.1');
+  assert.equal(formatValue(gain, -10), '-10.0');
+});
+
 test('typed text parses with its unit, and text without a number is ignored', () => {
   assert.equal(parseValue(gain, '-12 dB'), -12);
   assert.equal(parseValue(gain, '3.14'), 3.1);

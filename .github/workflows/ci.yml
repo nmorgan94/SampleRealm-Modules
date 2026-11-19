@@ -1,7 +1,9 @@
 name: CI
 
-# Runs only when started by hand, from the Actions tab or `gh workflow run ci.yml`
+# On a push to main, or by hand from the Actions tab or `gh workflow run ci.yml`
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:

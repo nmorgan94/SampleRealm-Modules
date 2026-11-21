@@ -112,6 +112,7 @@ One line in the plugin's `webui/package.json` names the copy every build uses:
   `initialData (name)` reads what `Plugin::withOptions` adds.
 - `withCentre (spec, value)` skews a real spec's range so that value sits half way, in place of `skew`; `skewOf (spec)` is the skew either way.
 - `HeaderBar` takes a `juce::Component&` in place of the title, and `HeaderBar.tsx` a function of the title's bounds, for a title of the plugin's own.
+- `HeaderBar::setOwnMenuItems`, and `ownMenuItems` in `HeaderBar.tsx`, add the plugin's own items to the menu.
 - `LabeledSlider::setLabelHeight`, and `labelHeight` in `LabeledSlider.tsx`, set the room the name takes. `parseText` reads typed
   text the plugin's way, and the `rotary` drawing is given the `param`.
 - `workletBackend`'s `typeParameter` types presets by a choice, as `PresetManager::Config::typeParameterId`, and `extraState` adds

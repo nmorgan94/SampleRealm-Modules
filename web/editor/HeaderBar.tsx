@@ -5,7 +5,7 @@ import type { PresetBackend, UpdateBackend } from '../backend.ts';
 import { FittedText, TextButton } from './controls.tsx';
 import { juceHeight } from './fonts.ts';
 import { centred, type Rect } from './layout.ts';
-import { useMenu } from './Menu.tsx';
+import { useMenu, type MenuItem } from './Menu.tsx';
 import { presetActions } from './presetActions.ts';
 import { PresetBar } from './PresetBar.tsx';
 import type { Prompt } from './PromptOverlay.tsx';
@@ -69,9 +69,11 @@ interface HeaderBarProps {
   prompt: Prompt;
   showManual(): void;
   meter(bounds: Rect): ReactNode;
+  // HeaderBar::setOwnMenuItems: the plugin's own items, asked for each time the menu opens
+  ownMenuItems?: () => MenuItem[];
 }
 
-export function HeaderBar({ title, width, layout, backend, prompt, showManual, meter }: HeaderBarProps) {
+export function HeaderBar({ title, width, layout, backend, prompt, showManual, meter, ownMenuItems }: HeaderBarProps) {
   const menu = useMenu();
   const boxes = layOut(width, layout);
   const actions = presetActions(backend.presets, prompt);
@@ -90,6 +92,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
       { kind: 'item', label: 'Manual', onSelect: showManual },
       { kind: 'item', label: 'About', onSelect: () => prompt.showMessage('About', aboutText(backend.info, backend.running)) },
       ...screenshotMenuItems(backend, prompt),
+      ...(ownMenuItems?.() ?? []),
       ...updateMenuItems(updates),
     ]);
   };

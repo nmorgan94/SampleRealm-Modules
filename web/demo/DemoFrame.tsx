@@ -49,7 +49,7 @@ export function DemoFrame({ width, height, status, editor, overlay, children }: 
 
   return (
     <div className="mx-auto" style={{ maxWidth: width }} ref={content}>
-      <div className="relative overflow-hidden rounded-xl" ref={editorBox} style={{ width: width * scale, height: height * scale }}>
+      <div className="relative overflow-hidden" ref={editorBox} style={{ width: width * scale, height: height * scale }}>
         <div className="origin-top-left" style={{ width, height, transform: `scale(${scale})` }}>
           {editor}
         </div>

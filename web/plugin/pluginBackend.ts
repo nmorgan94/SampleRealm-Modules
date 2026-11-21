@@ -6,6 +6,9 @@ import { toProportion } from '../editor/params.ts';
 // JUCE's type lists only its own initialisation data. presetStatus is there when the plugin has presets, updateStatus when it checks for updates
 type InitialisationData = { uiInfo: string[]; presetStatus?: string[]; activationStatus: string[]; updateStatus?: string[]; running: string[] };
 
+// A native function that can fail completes with why, or nothing when it worked
+const error = async (result: Promise<unknown>) => ((await result) as string) || null;
+
 function pluginActivation(initial: ActivationStatus): ActivationBackend {
   let status = initial;
   const listeners = listenerSet<[ActivationStatus]>();
@@ -19,7 +22,7 @@ function pluginActivation(initial: ActivationStatus): ActivationBackend {
 
   // Activated or not, the bar follows what the plugin now says
   const message = async (result: Promise<unknown>) => {
-    const said = ((await result) as string) || null;
+    const said = await error(result);
     update(await call('activationStatus'));
     return said;
   };
@@ -72,7 +75,6 @@ function pluginPresets(initial: PresetStatus): PresetBackend {
   // Asked again once listening, in case a change came first
   window.__JUCE__.backend.addEventListener('presetStatus', update);
   call('presetStatus').then(update);
-  const error = async (result: Promise<unknown>) => ((await result) as string) || null;
 
   return {
     status: () => status,
@@ -122,6 +124,7 @@ export function editorBackend(data = initialisationData()): EditorBackend {
     // Its functions exist only where the bar could show
     activation: activation.show ? pluginActivation(activation) : undefined,
     updates: updateStatus ? pluginUpdates(JSON.parse(updateStatus[0]) as UpdateStatus) : undefined,
+    screenshot: () => error(getNativeFunction('screenshot')()),
     param,
     getValue: (id) => slider(id).getScaledValue(),
     setValue: (id, value) => slider(id).setNormalisedValue(toProportion(param(id), value)),

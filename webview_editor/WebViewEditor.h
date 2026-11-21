@@ -3,6 +3,7 @@
 //==============================================================================
 /** The page add_webview_ui builds into the plugin, with the functions and events it calls. */
 class WebViewEditor final : public juce::AudioProcessorEditor,
+                            public Screenshot::Source,
                             private juce::Timer
 {
 public:
@@ -63,6 +64,9 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+
+    /** The page as the web view shows it, at the display's scale: JUCE can't paint it. */
+    void takeScreenshot (Screenshot::ImageCallback done) override;
 
 private:
     void timerCallback() override;

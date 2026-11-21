@@ -12,7 +12,7 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 | `core/samplerealm/` | Headers the plugin and its wasm engine share: parameter specs and values, UI info, transport, peak meter |
 | `licensing/` | JUCE module: machine code, offline licence verification, activation |
 | `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs none of the modules below |
-| `editor/` | JUCE module: header bar, presets, overlays, About, on top of `controls/`. No licensing |
+| `editor/` | JUCE module: header bar, presets, overlays, About, screenshots, on top of `controls/`. No licensing |
 | `activation/` | JUCE module: the activation bar, on `editor/` and `licensing/` |
 | `updates/` | JUCE module: asks the website for the plugin's latest version, and the menu items that tell the user. Needs none of the modules above |
 | `webview_editor/` | JUCE module: `WebViewEditor`, the native side of `web/plugin/pluginBackend.ts` |
@@ -153,6 +153,17 @@ The contract is the website's `docs/update-check.md`. The plugin only tells the 
 - Native: `header.setOwnMenuItems` adds `UpdateActions::addMenuItems`, and `UpdateActions::onChange` sets
   `header.setMenuMarked (actions.notice().isNotEmpty())`.
 - WebView: `WebViewEditor::Plugin::updates`. `HeaderBar.tsx` takes the backend's `updates`. The demo has none.
+
+### Screenshots
+
+"Screenshot" in the header's menu saves a PNG of the editor, at exactly its bounds, on the desktop as
+`<plugin name> <date> <time>.png`, and shows it in Finder or Explorer. A plugin does nothing to have it.
+
+- Native: `Screenshot::of` paints the editor at twice its size, whatever the display. A menu or a combo box's
+  list is its own window, so never in the picture.
+- WebView: JUCE can't paint the page, so `WebViewEditor` is a `Screenshot::Source` and asks the web view, which
+  gives the display's scale: twice the size only on a Retina screen. The page waits for its menu to go first.
+- The demo has none, and neither has a plugin without the header.
 
 ### What the plugin supplies to the editor
 

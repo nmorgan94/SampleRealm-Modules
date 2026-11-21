@@ -1,6 +1,7 @@
 #include "editor.h"
 
 #include "Manual.cpp"
+#include "Screenshot.cpp"
 #include "PresetManager.cpp"
 #include "PresetActions.cpp"
 #include "PresetBar.cpp"

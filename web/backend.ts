@@ -104,6 +104,8 @@ export interface EditorBackend {
   activation?: ActivationBackend;
   // Only in a plugin built to ask the website for its latest version
   updates?: UpdateBackend;
+  // Only inside a plugin: saves a picture of the editor. Resolves to an error message, or null
+  screenshot?(): Promise<string | null>;
   param(id: string): ParamInfo;
   // Real values, not 0..1
   getValue(id: string): number;

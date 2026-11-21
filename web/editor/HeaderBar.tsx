@@ -9,6 +9,7 @@ import { useMenu } from './Menu.tsx';
 import { presetActions } from './presetActions.ts';
 import { PresetBar } from './PresetBar.tsx';
 import type { Prompt } from './PromptOverlay.tsx';
+import { screenshotMenuItems, type ScreenshotBackend } from './screenshotActions.ts';
 import { updateMenuItems } from './updateActions.ts';
 
 // HeaderBar::Layout, which each plugin sets
@@ -64,7 +65,7 @@ interface HeaderBarProps {
   width: number;
   layout: HeaderLayout;
   // With `updates`, the menu has their items, and its button a dot while there is a notice: HeaderBar::setMenuMarked
-  backend: { info: About; running: string; presets: PresetBackend; updates?: UpdateBackend };
+  backend: { info: About; running: string; presets: PresetBackend; updates?: UpdateBackend } & ScreenshotBackend;
   prompt: Prompt;
   showManual(): void;
   meter(bounds: Rect): ReactNode;
@@ -88,6 +89,7 @@ export function HeaderBar({ title, width, layout, backend, prompt, showManual, m
       { kind: 'separator' },
       { kind: 'item', label: 'Manual', onSelect: showManual },
       { kind: 'item', label: 'About', onSelect: () => prompt.showMessage('About', aboutText(backend.info, backend.running)) },
+      ...screenshotMenuItems(backend, prompt),
       ...updateMenuItems(updates),
     ]);
   };

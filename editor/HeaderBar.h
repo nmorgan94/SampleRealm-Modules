@@ -93,6 +93,7 @@ private:
     juce::Font regularTitleFont() const;
     static float widthOf (const Title&, const juce::Font& boldFont, const juce::Font& regularFont);
     void showMenu();
+    void saveScreenshot();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HeaderBar)
 };

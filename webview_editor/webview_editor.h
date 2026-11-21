@@ -27,4 +27,5 @@
  #include <updates/updates.h>
 #endif
 
+#include "WebViewScreenshot.h"
 #include "WebViewEditor.h"

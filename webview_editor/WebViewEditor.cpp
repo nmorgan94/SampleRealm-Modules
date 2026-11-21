@@ -70,9 +70,7 @@ namespace
     void hideMacWebViewBackground ([[maybe_unused]] juce::WebBrowserComponent& browser)
     {
        #if JUCE_MAC
-        for (auto* child : browser.getChildren())
-            if (auto* host = dynamic_cast<juce::NSViewComponent*> (child))
-                [(id) host->getView() setValue: @NO forKey: @"drawsBackground"];
+        [macWebView (browser) setValue: @NO forKey: @"drawsBackground"];
        #endif
     }
 }
@@ -165,6 +163,17 @@ juce::WebBrowserComponent::Options WebViewEditor::createOptions()
    #if JUCE_MODULE_AVAILABLE_updates
     options = withUpdateFunctions (options);
    #endif
+
+    // Completes with a message for the user, empty once saved
+    options = options.withNativeFunction ("screenshot", [this] (const juce::Array<juce::var>&, juce::WebBrowserComponent::NativeFunctionCompletion complete)
+    {
+        Screenshot::saveToDesktop (*this, [editor = juce::Component::SafePointer<WebViewEditor> (this), completeSave = std::move (complete)] (const juce::Result& result)
+        {
+            // The completion needs the browser, which goes with the editor
+            if (editor != nullptr)
+                completeSave (result.getErrorMessage());
+        });
+    });
 
     if (plugin.withOptions != nullptr)
         options = plugin.withOptions (std::move (options));
@@ -425,6 +434,11 @@ void WebViewEditor::timerCallback()
    #if JUCE_MODULE_AVAILABLE_activation
     checkActivation();
    #endif
+}
+
+void WebViewEditor::takeScreenshot (Screenshot::ImageCallback done)
+{
+    WebViewScreenshot::of (*browser, std::move (done));
 }
 
 void WebViewEditor::paint (juce::Graphics& g)

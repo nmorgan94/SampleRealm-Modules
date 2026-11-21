@@ -31,6 +31,7 @@
 #include "PromptOverlay.h"
 #include "Manual.h"
 #include "HoverTip.h"
+#include "Screenshot.h"
 #include "PresetManager.h"
 #include "PresetActions.h"
 #include "PresetBar.h"

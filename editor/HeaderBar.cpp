@@ -158,9 +158,25 @@ void HeaderBar::showMenu()
     menu.addSeparator();
     menu.addItem ("Manual", showManual);
     menu.addItem ("About", [this] { prompt.showMessage ("About", aboutText); });
+    menu.addItem ("Screenshot", [this] { saveScreenshot(); });
 
     if (addOwnMenuItems != nullptr)
         addOwnMenuItems (menu);
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton));
+}
+
+void HeaderBar::saveScreenshot()
+{
+    auto* editor = findParentComponentOfClass<juce::AudioProcessorEditor>();
+
+    if (editor == nullptr)
+        return;
+
+    // A web view's picture arrives later, when the header may have gone
+    Screenshot::saveToDesktop (*editor, [header = juce::Component::SafePointer<HeaderBar> (this)] (const juce::Result& result)
+    {
+        if (header != nullptr && result.failed())
+            header->prompt.showMessage ("Screenshot", result.getErrorMessage());
+    });
 }

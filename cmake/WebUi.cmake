@@ -9,7 +9,8 @@ include_guard(GLOBAL)
 # Gives the files a webui build reads, leaving out those matching `skip`, and the file npm
 # writes on every install, with the rule that installs
 function(webui_sources uiDir skip inputsVariable installedVariable)
-    find_program(NPM_EXECUTABLE npm REQUIRED)
+    # Visual Studio runs npm.cmd to its end only when it is named in full
+    find_program(NPM_EXECUTABLE NAMES npm.cmd npm REQUIRED)
 
     # The commit npm installs into webui, and here before npm has run
     cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH modulesRepoDir)

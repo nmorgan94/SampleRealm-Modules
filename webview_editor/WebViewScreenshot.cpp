@@ -127,7 +127,11 @@ void WebViewScreenshot::of (juce::WebBrowserComponent& browser, Screenshot::Imag
    #if JUCE_MAC
     takeMacScreenshot (browser, std::move (done));
    #elif JUCE_WINDOWS
-    done (takeWindowsScreenshot (browser));
+    // The window's picture is some frames behind the page, so a menu just closed would still be in it
+    juce::Timer::callAfterDelay (150, [shown = juce::Component::SafePointer<juce::WebBrowserComponent> (&browser), whenTaken = std::move (done)]
+    {
+        whenTaken (shown != nullptr ? takeWindowsScreenshot (*shown) : juce::Image());
+    });
    #else
     done ({});
    #endif

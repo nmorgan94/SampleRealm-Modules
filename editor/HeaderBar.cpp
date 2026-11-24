@@ -50,6 +50,14 @@ float HeaderBar::titleTextWidth() const
     return widthOf (title, titleFont(), regularTitleFont());
 }
 
+float HeaderBar::titleSqueeze() const
+{
+    const auto width = titleTextWidth();
+    const auto room = static_cast<float> (layout.titleWidth);
+
+    return width > room ? std::max (minimumTitleScale, room / width) : 1.0f;
+}
+
 HeaderBar::FittedTitle HeaderBar::fitTitle (const Title& title, const juce::Font& boldFont, const juce::Font& regularFont, int width)
 {
     const auto room = static_cast<float> (width) / minimumTitleScale;

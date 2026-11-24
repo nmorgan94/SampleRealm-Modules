@@ -8,22 +8,21 @@ const MIN_SQUEEZE = 0.7;
 // `regular` follows the text in the regular weight
 export function FittedText({ text, regular = '', width, centred = false }: { text: string; regular?: string; width: number; centred?: boolean }) {
   const span = useRef<HTMLSpanElement>(null);
-  const [squeeze, setSqueeze] = useState(1);
+  const [natural, setNatural] = useState(0);
+  const room = width / MIN_SQUEEZE;
+  const squeeze = natural > width ? Math.max(MIN_SQUEEZE, width / natural) : 1;
 
   useLayoutEffect(() => {
-    const measure = () => {
-      const natural = span.current?.scrollWidth ?? 0;
-      setSqueeze(natural > width ? Math.max(MIN_SQUEEZE, width / natural) : 1);
-    };
+    const measure = () => setNatural(span.current?.scrollWidth ?? 0);
     measure();
     document.fonts?.ready.then(measure);
-  }, [text, regular, width]);
+  }, [text, regular]);
 
   return (
     <span
       ref={span}
       className={`inline-block shrink-0 ${centred ? 'origin-center' : 'origin-left'} overflow-hidden text-ellipsis whitespace-pre`}
-      style={{ maxWidth: width / squeeze, transform: `scaleX(${squeeze})` }}
+      style={{ maxWidth: natural > room ? room : undefined, transform: `scaleX(${squeeze})` }}
     >
       {text}
       {regular && <span className="font-normal">{regular}</span>}

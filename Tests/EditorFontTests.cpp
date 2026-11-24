@@ -20,6 +20,15 @@ namespace
 
     const HeaderBar::Layout layout { .height = 44, .edge = 12, .titleWidth = 128, .titleHeight = 18.0f,
                                      .gap = 12, .controlsHeight = 24, .meterWidth = 20, .meterInset = 4 };
+
+    // Outlive the header that holds them
+    struct HeaderParts
+    {
+        StubPlugin::Processor processor;
+        PresetManager presets { processor.getAPVTS(), {} };
+        PromptOverlay prompt;
+        juce::Component meter;
+    };
 }
 
 //==============================================================================
@@ -56,6 +65,35 @@ TEST_CASE ("A two-weight title is squeezed to fit, then cut short with an ellips
     CHECK (boldCut.shown.regular == ellipsis);
 }
 
+TEST_CASE_METHOD (EditorFixtures::OverlayFixture, "The header says how far its title is squeezed", "[editor]")
+{
+    HeaderParts parts;
+    juce::Component ownTitle;
+
+    const auto squeezeOf = [&] (const HeaderBar::Title& title, int titleWidth)
+    {
+        auto narrowed = layout;
+        narrowed.titleWidth = titleWidth;
+        HeaderBar header { title, narrowed, parts.presets, parts.prompt, [] {}, "About", parts.meter };
+        parent.addAndMakeVisible (header);
+        return header.titleSqueeze();
+    };
+
+    HeaderBar measured { "TITLE", layout, parts.presets, parts.prompt, [] {}, "About", parts.meter };
+    parent.addAndMakeVisible (measured);
+    const auto width = measured.titleTextWidth();
+
+    CHECK (squeezeOf ({ "TITLE", {} }, juce::roundToInt (std::ceil (width))) == 1.0f);
+    CHECK_THAT (squeezeOf ({ "TITLE", {} }, juce::roundToInt (width * 0.8f)), Catch::Matchers::WithinAbs (0.8, 0.02));
+    CHECK (squeezeOf ({ "TI", "TLE" }, juce::roundToInt (width * 0.8f)) < 1.0f);
+    CHECK_THAT (squeezeOf ({ "TITLE", {} }, juce::roundToInt (width * 0.5f)), Catch::Matchers::WithinAbs (HeaderBar::minimumTitleScale, 0.0));
+
+    auto noRoom = layout;
+    noRoom.titleWidth = 0;
+    HeaderBar own { ownTitle, noRoom, parts.presets, parts.prompt, [] {}, "About", parts.meter };
+    CHECK (own.titleSqueeze() == 1.0f);
+}
+
 TEST_CASE_METHOD (EditorFixtures::OverlayFixture, "Painted text takes its font from a LookAndFeel that gives one, and JUCE's default otherwise", "[editor][font]")
 {
     juce::Component child;
@@ -81,14 +119,7 @@ TEST_CASE_METHOD (EditorFixtures::OverlayFixture, "The header's title, the manua
     LookAndFeelWithFonts lookAndFeel;
     parent.setLookAndFeel (&lookAndFeel);
 
-    // Outlive the header that holds them
-    struct Parts
-    {
-        StubPlugin::Processor processor;
-        PresetManager presets { processor.getAPVTS(), {} };
-        PromptOverlay prompt;
-        juce::Component meter;
-    } parts;
+    HeaderParts parts;
 
     {
         HeaderBar header { "TITLE", layout, parts.presets, parts.prompt, [] {}, "About", parts.meter };

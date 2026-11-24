@@ -42,6 +42,9 @@ public:
     /** Both parts, before any squeezing. */
     float titleTextWidth() const;
 
+    /** 1 when the whole title fits Layout::titleWidth, less when it's squeezed, and minimumTitleScale when it's cut short. */
+    float titleSqueeze() const;
+
     /** As drawFittedText: squeezed to fit, as far as minimumTitleScale, then cut short with "…". */
     struct FittedTitle
     {

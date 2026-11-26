@@ -22,6 +22,14 @@ namespace
         return places;
     }
 
+    // AudioParameterBool reports whatever the host sent, but saves on or off
+    struct Toggle final : juce::AudioParameterBool
+    {
+        using AudioParameterBool::AudioParameterBool;
+
+        float getValue() const override { return get() ? 1.0f : 0.0f; }
+    };
+
     // AudioParameterFloat's own text, but a value that rounds to zero has no minus
     std::function<juce::String (float, int)> textWithDecimalPlaces (int places)
     {
@@ -70,7 +78,7 @@ namespace
             }
 
             case ParameterSpecs::Kind::toggle:
-                return std::make_unique<juce::AudioParameterBool> (
+                return std::make_unique<Toggle> (
                     id, spec.name, spec.defaultValue >= 0.5f,
                     juce::AudioParameterBoolAttributes().withLabel (spec.unit).withAutomatable (spec.automatable));
 

@@ -73,6 +73,20 @@ TEST_CASE ("The layout has a parameter of the right kind for each spec, in order
     CHECK (shapeParameter->isAutomatable());
 }
 
+TEST_CASE ("A toggle is on or off, whatever the host sends", "[parameters]")
+{
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    StubPlugin::SilentProcessor host;
+    juce::AudioProcessorValueTreeState apvts { host, nullptr, "Parameters", createParameterLayout (specs, 1) };
+    auto& muteParameter = *apvts.getParameter ("mute");
+
+    muteParameter.setValue (0.8f);
+    CHECK_THAT (muteParameter.getValue(), WithinAbs (1.0, 1.0e-6));
+
+    muteParameter.setValue (0.3f);
+    CHECK_THAT (muteParameter.getValue(), WithinAbs (0.0, 1.0e-6));
+}
+
 TEST_CASE ("A choice reads its names in any case, then numbers, from the host and from its knob", "[parameters]")
 {
     juce::ScopedJuceInitialiser_GUI juceInitialiser;

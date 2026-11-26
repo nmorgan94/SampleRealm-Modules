@@ -9,7 +9,7 @@ Code shared by every SampleRealm plugin, fetched by each at a pinned commit.
 
 | Folder | Holds |
 | --- | --- |
-| `core/samplerealm/` | Headers the plugin and its wasm engine share: parameter specs and values, UI info, transport, peak meter |
+| `core/samplerealm/` | Headers the plugin and its wasm engine share: parameter specs and values, UI info, transport, peak meter, spectrum analyser |
 | `licensing/` | JUCE module: machine code, offline licence verification, activation |
 | `controls/` | JUCE module: `createParameterLayout`, `LabeledSlider`, `LevelMeter`. Needs none of the modules below |
 | `editor/` | JUCE module: header bar, presets, overlays, About, screenshots, on top of `controls/`. No licensing |

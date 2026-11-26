@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <samplerealm/ParameterValues.h>
 #include <samplerealm/PeakMeter.h>
+#include <samplerealm/SpectrumAnalyser.h>
 #include <samplerealm/Transport.h>
 #include <samplerealm/UiInfoJson.h>
 
@@ -274,4 +276,138 @@ TEST_CASE ("The transport moves on only while playing", "[core][transport]")
     transport.playing = false;
     transport.advance (24000, 48000.0);
     CHECK_THAT (transport.ppq, WithinAbs (5.0, 1.0e-12));
+}
+
+//==============================================================================
+namespace
+{
+    using Spectrum = SpectrumAnalyser<96>;
+
+    constexpr double frameSeconds = 1.0 / 60.0;
+
+    int bandOf (float hz)
+    {
+        return static_cast<int> (std::floor (Spectrum::numBands * std::log (hz / Spectrum::minHz) / std::log (Spectrum::maxHz / Spectrum::minHz)));
+    }
+
+    // A second of a full-scale sine
+    std::vector<float> tone (double hz, double rate = TestHelpers::sampleRate)
+    {
+        std::vector<float> samples (static_cast<size_t> (rate));
+
+        for (size_t i = 0; i < samples.size(); ++i)
+            samples[i] = static_cast<float> (std::sin (juce::MathConstants<double>::twoPi * hz * static_cast<double> (i) / rate));
+
+        return samples;
+    }
+
+    template <int numBands>
+    void push (SpectrumAnalyser<numBands>& spectrum, const std::vector<float>& samples)
+    {
+        spectrum.push (samples.data(), static_cast<int> (samples.size()));
+    }
+}
+
+TEST_CASE ("A full-scale 1 kHz sine reads 0 dB in its band and nothing far from it, at any sample rate", "[core][spectrum]")
+{
+    const auto rate = GENERATE (44100.0, 48000.0, 96000.0, 192000.0);
+    CAPTURE (rate);
+
+    Spectrum spectrum;
+    spectrum.setSampleRate (rate);
+    push (spectrum, tone (1000.0, rate));
+
+    for (int i = 0; i < 30; ++i)
+        spectrum.update (frameSeconds);
+
+    const auto& bands = spectrum.getBands();
+    const auto loudest = static_cast<int> (std::max_element (bands.begin(), bands.end()) - bands.begin());
+
+    CHECK (loudest == bandOf (1000.0f));
+    CHECK_THAT (bands[static_cast<size_t> (loudest)], WithinAbs (0.0, 1.5));
+    CHECK (bands[static_cast<size_t> (bandOf (100.0f))] < -60.0f);
+    CHECK (bands[static_cast<size_t> (bandOf (10000.0f))] < -60.0f);
+}
+
+TEST_CASE ("Bands above half the sample rate read nothing", "[core][spectrum]")
+{
+    // 15 kHz is under half of 32 kHz, and the bands from 16 kHz up are over it
+    Spectrum spectrum;
+    spectrum.setSampleRate (32000.0);
+    push (spectrum, tone (15000.0, 32000.0));
+    spectrum.update (1.0);
+
+    CHECK (spectrum.getBands()[static_cast<size_t> (bandOf (15000.0f))] > -10.0f);
+    CHECK_THAT (spectrum.getBands()[static_cast<size_t> (bandOf (17000.0f))], WithinAbs (Spectrum::floorDb, 0.0));
+    CHECK_THAT (spectrum.getBands().back(), WithinAbs (Spectrum::floorDb, 0.0));
+}
+
+TEST_CASE ("The spectrum tilts up 4.5 dB an octave around 1 kHz", "[core][spectrum]")
+{
+    // From 65 Hz, where a band is narrower than a bin and is read between two, to 13 kHz
+    const auto band = GENERATE (16, 24, 40, 70, 90);
+    const auto hz = Spectrum::centreOf (band);
+    CAPTURE (band, hz);
+
+    Spectrum spectrum;
+    push (spectrum, tone (hz));
+
+    for (int i = 0; i < 30; ++i)
+        spectrum.update (frameSeconds);
+
+    CHECK_THAT (spectrum.getBands()[static_cast<size_t> (band)], WithinAbs (4.5 * std::log2 (hz / 1000.0), 1.8));
+    CHECK_THAT (Spectrum::centreOf (bandOf (1000.0f)), WithinAbs (1000.0, 40.0));
+}
+
+TEST_CASE ("The spectrum's bands fall slowly, and its peaks hold until they're reset", "[core][spectrum]")
+{
+    Spectrum spectrum;
+    const auto band = static_cast<size_t> (bandOf (1000.0f));
+    push (spectrum, tone (1000.0));
+
+    for (int i = 0; i < 30; ++i)
+        spectrum.update (frameSeconds);
+
+    const auto level = spectrum.getBands()[band];
+
+    // A second of silence
+    push (spectrum, std::vector<float> (48000, 0.0f));
+
+    for (int i = 0; i < 60; ++i)
+        spectrum.update (frameSeconds);
+
+    CHECK_THAT (spectrum.getBands()[band], WithinAbs (level - 24.0f, 0.5));
+    CHECK_THAT (spectrum.getPeaks()[band], WithinAbs (level, 1.0e-4));
+
+    spectrum.resetPeaks();
+    CHECK_THAT (spectrum.getPeaks()[band], WithinAbs (spectrum.getBands()[band], 0.0));
+
+    for (int i = 0; i < 600; ++i)
+        spectrum.update (frameSeconds);
+
+    CHECK_THAT (spectrum.getBands()[band], WithinAbs (Spectrum::floorDb, 0.0));
+}
+
+TEST_CASE ("A sample rate that isn't above 0 leaves the spectrum as it was", "[core][spectrum]")
+{
+    Spectrum spectrum;
+    spectrum.setSampleRate (GENERATE (0.0, -48000.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()));
+    push (spectrum, tone (1000.0));
+    spectrum.update (1.0);
+
+    CHECK_THAT (spectrum.getBands()[static_cast<size_t> (bandOf (1000.0f))], WithinAbs (0.0, 1.5));
+}
+
+TEST_CASE ("The spectrum has as many bands as it's asked for, over the same range", "[core][spectrum]")
+{
+    SpectrumAnalyser<24> spectrum;
+    push (spectrum, tone (1000.0));
+    spectrum.update (1.0);
+
+    const auto& bands = spectrum.getBands();
+    const auto loudest = std::max_element (bands.begin(), bands.end()) - bands.begin();
+
+    // 20 Hz to 20 kHz is three decades, so eight bands each
+    CHECK (bands.size() == 24);
+    CHECK (loudest == 13);
 }
